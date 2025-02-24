@@ -44,10 +44,12 @@ Collection of custom World of Warcraft addons specifically developed for Warmane
 
 ### WarmaneTrackingAid
 ![Tracking Aid Demo](screenshots/tracking-aid-demo.png)
+
 *Reactive tracking system adapting to enemy types in PvP combat.*
 
 ### WarmaneChatCopy
 ![Chat Copy Demo](screenshots/chat-copy-demo.png)
+
 *Copy messages by clicking on the channel name or directly on messages without a channel.*
 
 ## ⚙️ Installation
@@ -85,6 +87,7 @@ Contributions are welcome! Here's how you can help:
    - Example: `feature/f-wta-track-hidden`
 3. Commit your changes (`git commit -am 'WXY: Added awesome feature'`)
    - Commit messages need to start with the addon shorcode (WXY) to maintain order
+   - This doesn't apply for non AddOn-specific commits
 4. Push to the branch (`git push origin feature/f-wxy-feature-name`)
 5. Open a Pull Request
 
