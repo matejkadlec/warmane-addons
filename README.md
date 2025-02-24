@@ -10,6 +10,7 @@ Collection of custom World of Warcraft addons specifically developed for Warmane
 - [Available AddOns](#-available-addons)
   - [WarmaneCommonUtils](#warmanecommonutils)
   - [WarmaneTrackingAid](#warmanetrackingaid)
+  - [WarmaneChatCopy](#warmanechatcopy)
 - [Screenshots](#-screenshots)
 - [Installation](#️-installation)
 - [Dependencies](#-dependencies)
@@ -32,11 +33,22 @@ Collection of custom World of Warcraft addons specifically developed for Warmane
 - GCD-aware to prevent false switching
 - Implemented to work with manual tracking switching as well
 
+### WarmaneChatCopy
+📋 Makes chat messages easily copyable.
+- Click on channel name or on the message directly to copy messages
+- Works with all message types (channels, system, say, ...)
+- Supports multiple messages in copy window
+- Clear button to reset copy window content
+
 ## 📸 Screenshots
 
 ### WarmaneTrackingAid
 ![Tracking Aid Demo](screenshots/tracking-aid-demo.png)
 *Reactive tracking system adapting to enemy types in PvP combat.*
+
+### WarmaneChatCopy
+![Chat Copy Demo](screenshots/chat-copy-demo.png)
+*Copy messages by clicking on the channel name or directly on messages without a channel.*
 
 ## ⚙️ Installation
 

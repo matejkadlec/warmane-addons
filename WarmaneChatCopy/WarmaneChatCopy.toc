@@ -1,0 +1,8 @@
+## Interface: 30300
+## Title: |cFFFF8000Warmane|r Chat Copy
+## Notes: Click on the channel name to copy the chat message.
+## Author: Matej Kadlec (https://github.com/matejkadlec)
+## Version: 1.0
+## Dependencies: WarmaneCommonUtils
+
+WarmaneChatCopy.xml
