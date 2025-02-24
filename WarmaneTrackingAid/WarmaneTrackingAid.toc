@@ -1,0 +1,8 @@
+## Interface: 30300
+## Title: |cFFFF8000Warmane|r Tracking Aid
+## Notes: Automatically switches Hunter tracking based on target type.
+## Author: Matej Kadlec (https://github.com/matejkadlec)
+## Version: 1.0
+## Dependencies: WarmaneCommonUtils
+
+WarmaneTrackingAid.lua

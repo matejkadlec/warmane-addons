@@ -1,0 +1,10 @@
+## Interface: 30300
+## Title: |cFFFF8000Warmane|r Common Utils
+## Notes: Library of shared functions for Warmane addons.
+## Author: Matej Kadlec (https://github.com/matejkadlec)
+## Version: 1.0
+## X-Type: Library
+
+WarmaneCommonUtils.lua
+CommonMessages.lua
+SafeAPI.lua
