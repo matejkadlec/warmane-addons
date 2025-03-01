@@ -6,5 +6,5 @@
 ## X-Type: Library
 
 WarmaneCommonUtils.lua
-CommonMessages.lua
+CommonFormat.lua
 SafeAPI.lua

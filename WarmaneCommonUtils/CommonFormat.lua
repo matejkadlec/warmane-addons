@@ -17,21 +17,6 @@ local COLOR = {
 
 -- Format numbers with dots as thousand separators
 WCU.common_format = {
-    Number = function(number)
-        -- Validate input
-        if type(number) ~= "number" then 
-            return "0" 
-        end
-        local formatted = tostring(number)
-        local k = #formatted % 3
-        if k == 0 then k = 3 end
-        local result = string_sub(formatted, 1, k)
-        for i = k + 1, #formatted, 3 do
-            result = result .. "." .. string_sub(formatted, i, i + 2)
-        end
-        return result
-    end,
-
     -- Format general messages with prefix and optional value
     Message = function(prefix, msg, value, showColon)
         -- Validate input
@@ -50,6 +35,21 @@ WCU.common_format = {
         end
         
         return string_format("%s%s%s|r", formattedPrefix, COLOR.YELLOW, msg)
+    end,
+
+    Number = function(number)
+        -- Validate input
+        if type(number) ~= "number" then 
+            return "0" 
+        end
+        local formatted = tostring(number)
+        local k = #formatted % 3
+        if k == 0 then k = 3 end
+        local result = string_sub(formatted, 1, k)
+        for i = k + 1, #formatted, 3 do
+            result = result .. "." .. string_sub(formatted, i, i + 2)
+        end
+        return result
     end,
 
     -- Format error messages in red color
