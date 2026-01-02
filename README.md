@@ -12,6 +12,7 @@ Collection of custom World of Warcraft addons specifically developed for Warmane
   - [WarmaneTrackingAid](#warmanetrackingaid)
   - [WarmaneChatCopy](#warmanechatcopy)
   - [WarmaneWGReminder](#warmanewgreminder) [WIP]
+  - [WarmaneInstanceTracker](#warmaneinstancetracker) [WIP]
 - [Screenshots](#-screenshots)
 - [Installation](#️-installation)
 - [Dependencies](#-dependencies)
@@ -51,6 +52,13 @@ Collection of custom World of Warcraft addons specifically developed for Warmane
    - Those values can be changed in `WarmaneWGReminder.lua`, line 13
 - Also shows notification right after the battle begins and ends
 - Check is performed each second
+
+### WarmaneInstanceTracker [WIP]
+⚠️ This addon has many known bugs and is not working properly. Don't use it unless you are programmer and want to fix the bugs.
+
+- This addon is heavily inspired by [Nova Instance Tracker](https://www.curseforge.com/wow/addons/nova-instance-tracker).
+- The goal is to track player's dungeon times, mob kills, XP gains and more.
+- Once the main goal is achieved, there is also huge room for expanding functionality both in breadth (i.e. adding raids) and in depth (i.e. more statistics).
 
 ## 📸 Screenshots
 

@@ -69,7 +69,7 @@ WTA:SetScript("OnEvent", function(self, event, ...)
         end
         
         -- Print loading message
-        print(string_format("|cFFFF8000Warmane|cFFFFFF00 Tracking Aid loaded|r"))
+        print(string_format("|cFFFF8000Warmane|cFFFFFF00TrackingAid loaded|r"))
         
         -- Register target change event only for hunters
         self:RegisterEvent("PLAYER_TARGET_CHANGED")

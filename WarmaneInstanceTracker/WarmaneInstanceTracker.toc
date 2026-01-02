@@ -1,0 +1,12 @@
+## Interface: 30300
+## Title: |cFFFF8000Warmane|r Instance Tracker
+## Notes: Tracks instance run times, mobs killed and XP gains.
+## Author: Matej Kadlec (https://github.com/matejkadlec)
+## Version: 1.0
+## SavedVariables: WITSavedData
+## Dependencies: WarmaneCommonUtils
+
+utils\AddonFormat.lua
+utils\BossData.lua
+utils\Utils.lua
+WarmaneInstanceTracker.lua
