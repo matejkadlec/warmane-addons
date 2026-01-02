@@ -90,33 +90,21 @@ WarmaneCommonUtils is required by all addons, otherwise they are standalone and 
 
 ## 💡 Feedback & Development
 
-I'm actively developing custom AddOns for Warmane! Your input is valuable:
-
-- Report any bugs or unexpected behaviour
-- Share your ideas for improvements or additional functionality
-- Request entirely new addons
-- Either open an issue on GitHub or reach out via Discord: **jimmorioriarty**
-- Note that I'm currently not interested in backporting existing addons
-
-All feedback is appreciated and helps make these addons better for everyone!
+- I'm currently <b>not</b> working on this project and I <b>won't</b> do any code changes. The WIP addons will stay WIP. 
+- That being said, I'm not abandoning this for good and might return to it in the future if I start playing WoW again.
+- As of now I will only merge your PR or add you as a collaborant if you'd like to contribute to this project.
+   - Note that I will only review the PR's with Copilot or directly merge them if the changes are small.
+- Otherwise feel free to do whatever with this repo, you can link it if you use it in your project, but I don't demand it.
 
 ## 🤝 Contributing
 
-Contributions are welcome! Here's how you can help:
-1. Fork the repository
-2. Create a new branch following the naming convention:
-   - Format: `feature/f-wxy-feature-name`
-   - `f` indicates it's a feature
-   - `wxy` is the addon shortcode (e.g., wta for WarmaneTrackingAid)
-   - `feature-name` describes the feature
-   - Example: `feature/f-wta-track-hidden`
-3. Commit your changes (`git commit -am 'WXY: Added awesome feature'`)
-   - Commit messages need to start with the addon shorcode (WXY) to maintain order
-   - This doesn't apply for non AddOn-specific commits
-4. Push to the branch (`git push origin feature/f-wxy-feature-name`)
-5. Open a Pull Request
-
-If you want to add your own Warmane AddOns to this repository:
+- As stated in section above, contributors are welcome. 
+- Some general rules for any PR, as we don't want any spaghetti code:
+   - Follow Lua language conventions and WoW addon development best practices
+   - Use PascalCase for function names and camelCase for variable names
+   - Comment your code
+   - Update this file so the description and screenshot correspond to the latest AddOn version
+- Additional rules for for <b>completely new</b> AddOns for this repo:
 
 1. Addon Naming Requirements:
    - Follow the format `Warmane[Addon][Name]` for consistency
@@ -126,16 +114,7 @@ If you want to add your own Warmane AddOns to this repository:
    - Utilize the WarmaneCommonUtils library for common functionality (API calls, message formatting)
    - You may extend WarmaneCommonUtils with new functionality for your addons while maintaining backward compatibility
 
-3. Code Standards:
-   - Follow Lua language conventions
-   - Follow WoW addon development best practices
-   - Use PascalCase for function names and camelCase for variable names
-   - Include appropriate code documentation
-   - Document your addon in this README with description and screenshots
-
-## ⭐ Support
-
-If you find these addons helpful, please star the repository and share with other Warmane players!
+- Otherwise, there are no rules for branch names etc., just make it that the commit messages make sense.
 
 ---
-Made with ❤️ for the Warmane Community
+Made with ❤️ for the Warmane community
