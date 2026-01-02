@@ -1,8 +1,8 @@
 # 🎮 Warmane AddOns Collection
 
 ![WoW Version](https://img.shields.io/badge/WoW-3.3.5a-blue.svg)
-![License](https://img.shields.io/badge/license-GPL--3.0-green.svg)
-![Status](https://img.shields.io/badge/status-active-success.svg)
+![License](https://img.shields.io/badge/license-MIT-green.svg)
+![Status](https://img.shields.io/badge/status-inactive-red.svg)
 
 Collection of custom World of Warcraft addons specifically developed for Warmane's WotLK (3.3.5a) servers.
 
