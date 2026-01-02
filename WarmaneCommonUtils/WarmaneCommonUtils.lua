@@ -5,4 +5,4 @@ _G.WarmaneCommonUtils = {
 }
 
 -- Print loading message
-print(string.format("|cFFFF8000Warmane|cFFFFFF00 Common Utils loaded|r"))
+print(string.format("|cFFFF8000Warmane|cFFFFFF00CommonUtils loaded|r"))

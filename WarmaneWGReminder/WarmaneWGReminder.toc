@@ -1,0 +1,8 @@
+## Interface: 30300
+## Title: |cFFFF8000Warmane|r WG Reminder
+## Notes: Reminds players about upcoming Wintergrasp battles.
+## Author: Matej Kadlec (https://github.com/matejkadlec)
+## Version: 1.0
+## Dependencies: WarmaneCommonUtils
+
+WarmaneWGReminder.lua

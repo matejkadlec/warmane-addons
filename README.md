@@ -11,6 +11,7 @@ Collection of custom World of Warcraft addons specifically developed for Warmane
   - [WarmaneCommonUtils](#warmanecommonutils)
   - [WarmaneTrackingAid](#warmanetrackingaid)
   - [WarmaneChatCopy](#warmanechatcopy)
+  - [WarmaneWGReminder](#warmanewgreminder) [WIP]
 - [Screenshots](#-screenshots)
 - [Installation](#️-installation)
 - [Dependencies](#-dependencies)
@@ -35,10 +36,21 @@ Collection of custom World of Warcraft addons specifically developed for Warmane
 
 ### WarmaneChatCopy
 📋 Makes chat messages easily copyable.
-- Click on channel name or on the message directly to copy messages
+- Click on the channel name or into the message directly to copy messages into a new window
+- You can copy messages from the copy window with `CTRL-C`
 - Works with all message types (channels, system, say, ...)
-- Supports multiple messages in copy window
-- Clear button to reset copy window content
+- Supports multiple messages in the copy window
+- Clear button to reset the copy window content
+
+### WarmaneWGReminder [WIP]
+⚠️ The reminder time has offset and the fix is not yet implemented.
+
+⏰ Reminds players about upcoming Wintergrasp battle.
+- Accurate Wintergrasp battle reminder
+- Shows notifications at 30, 15, and 5 minutes before battle
+   - Those values can be changed in `WarmaneWGReminder.lua`, line 13
+- Also shows notification right after the battle begins and ends
+- Check is performed each second
 
 ## 📸 Screenshots
 
@@ -50,7 +62,12 @@ Collection of custom World of Warcraft addons specifically developed for Warmane
 ### WarmaneChatCopy
 ![Chat Copy Demo](screenshots/chat-copy-demo.png)
 
-*Copy messages by clicking on the channel name or directly on messages without a channel.*
+*Separate window to copy any message from the chat, created by clicking on the channel name or into the message directly.*
+
+### WarmaneWGReminder
+![WG Reminder Demo](screenshots/wg-reminder-demo.png)
+
+*Timely reminder for Wintergrasp battles to ensure you never miss one again.*
 
 ## ⚙️ Installation
 
