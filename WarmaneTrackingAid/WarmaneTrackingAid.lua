@@ -2,6 +2,7 @@ local addonName, addon = ...
 
 -- Cache frequently used functions
 local select = select
+local type = type
 local GetSpellInfo = GetSpellInfo
 local UnitCreatureType = UnitCreatureType
 local CastSpellByName = CastSpellByName
@@ -9,9 +10,27 @@ local string_format = string.format
 local GetTime = GetTime
 local UnitReaction = UnitReaction
 
--- Import WarmaneCommonUtils from global scope
-local WCU = _G.WarmaneCommonUtils
-local common_format = WCU.common_format
+-- Define color codes
+local COLOR = {
+    ORANGE = "|cFFFF8000",
+    YELLOW = "|cFFFFFF00"
+}
+
+-- Format general messages with prefix and optional value
+local function FormatMessage(prefix, msg, value, showColon)
+    if type(prefix) ~= "string" or type(msg) ~= "string" then return "" end
+    local formattedPrefix = string_format("%s[%s] ", COLOR.ORANGE, prefix)
+    if value then
+        if showColon then
+            return string_format("%s%s%s: %s%s|r",
+                formattedPrefix, COLOR.YELLOW, msg, COLOR.ORANGE, value)
+        else
+            return string_format("%s%s%s %s%s|r",
+                formattedPrefix, COLOR.YELLOW, msg, COLOR.ORANGE, value)
+        end
+    end
+    return string_format("%s%s%s|r", formattedPrefix, COLOR.YELLOW, msg)
+end
 
 -- Define tracking spells and their corresponding creature types
 local TRACKING_SPELLS = {
@@ -102,14 +121,14 @@ WTA:SetScript("OnEvent", function(self, event, ...)
                         
                         local _, _, icon = GetSpellInfo(trackingSpell)
                         if icon then
-                            print(common_format.Message("WTA", "Switched to", trackingSpell, true))
+                            print(FormatMessage("WTA", "Switched to", trackingSpell, true))
                         end
                     else
                         local remainingTime = GCD_DELAY - timeSinceLastCast
                         local timeText = remainingTime >= 1 and 
                             string_format("%.1f |cFFFFFF00second|r", remainingTime) or
                             string_format("%.1f |cFFFFFF00seconds|r", remainingTime)
-                        print(common_format.Message("WTA", "You need to wait", timeText))
+                        print(FormatMessage("WTA", "You need to wait", timeText))
                     end
                 end
             end

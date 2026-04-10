@@ -3,13 +3,13 @@ local addonName, addon = ...
 -- Cache frequently used functions
 local time = time
 local print = print
+local tinsert = tinsert
 local math_floor = math.floor
 local string_format = string.format
 
--- Import WarmaneCommonUtils and local utils
-local WCU = _G.WarmaneCommonUtils
-local common_format = WCU.common_format
-local safe = WCU.safe
+-- Import local utils from addon namespace
+local common = addon.common
+local safe = addon.safe
 local utils = addon.utils
 local format = addon.format
 
@@ -26,13 +26,13 @@ local lastXPUpdate = 0
 local isCorpseRunning = false
 
 -- Process and display instance completion statistics
-function ProcessInstanceCompletion()
+local function ProcessInstanceCompletion()
     -- Validate essential state first
     if not inInstance or startTime == 0 then 
-        print(common_format.ErrorMessage("WIT", "process completion (invalid state)"))
-        print(common_format.Message("WIT", "Debug - inInstance", tostring(inInstance), true))
-        print(common_format.Message("WIT", "Debug - startTime", format.Time(startTime), true))
-        print(common_format.Message("WIT", "Debug - instanceName", instanceName, true))
+        print(common.ErrorMessage("WIT", "process completion (invalid state)"))
+        print(common.Message("WIT", "Debug - inInstance", tostring(inInstance), true))
+        print(common.Message("WIT", "Debug - startTime", format.Time(startTime), true))
+        print(common.Message("WIT", "Debug - instanceName", instanceName, true))
         return 
     end
     
@@ -45,7 +45,7 @@ function ProcessInstanceCompletion()
     if isMaxLevel then
         -- For max level characters, only track time
         if duration <= 0 then
-            print(common_format.ErrorMessage("WIT", "save instance data (invalid duration)"))
+            print(common.ErrorMessage("WIT", "save instance data (invalid duration)"))
             return
         end
         
@@ -60,9 +60,9 @@ function ProcessInstanceCompletion()
         
         -- Save run data to persistent storage
         if WITSavedData then
-            table_insert(WITSavedData.instances, instanceData)
+            tinsert(WITSavedData.instances, instanceData)
         else
-            print(common_format.ErrorMessage("WIT", "access saved data (corrupted or not initialized)"))
+            print(common.ErrorMessage("WIT", "access saved data (corrupted or not initialized)"))
             return
         end
         
@@ -70,15 +70,17 @@ function ProcessInstanceCompletion()
         local stats = utils.GetInstanceStats(instanceName)
         
         -- Display completion statistics
-        print(common_format.Message("WIT", instanceName .. " completed in", format.Time(duration), false))
+        print(common.Message("WIT", instanceName .. " completed in", format.Time(duration), false))
         
-        if duration ~= stats.averageTime then
-            print(common_format.Message("WIT", "Average time", format.Time(stats.averageTime) .. 
-                format.TimeDifference(duration, stats.averageTime), true))
-        end
-        if duration ~= stats.fastestTime then
-            print(common_format.Message("WIT", "Fastest time", format.Time(stats.fastestTime) .. 
-                format.TimeDifference(duration, stats.fastestTime), true))
+        if stats then
+            if duration ~= stats.averageTime then
+                print(common.Message("WIT", "Average time", format.Time(stats.averageTime) .. 
+                    format.TimeDifference(duration, stats.averageTime), true))
+            end
+            if duration ~= stats.fastestTime then
+                print(common.Message("WIT", "Fastest time", format.Time(stats.fastestTime) .. 
+                    format.TimeDifference(duration, stats.fastestTime), true))
+            end
         end
         
         -- Reset state variables
@@ -105,11 +107,11 @@ function ProcessInstanceCompletion()
        duration <= 0 or
        xpGained <= 0 or
        mobsKilled <= 0 then
-        print(common_format.ErrorMessage("WIT", "save instance data (invalid values)"))
-        print(common_format.Message("WIT", "Debug - instanceName", instanceName, true))
-        print(common_format.Message("WIT", "Debug - duration", format.Time(duration), true))
-        print(common_format.Message("WIT", "Debug - xpGained", format.Number(xpGained), true))
-        print(common_format.Message("WIT", "Debug - mobsKilled", format.Number(mobsKilled), true))
+        print(common.ErrorMessage("WIT", "save instance data (invalid values)"))
+        print(common.Message("WIT", "Debug - instanceName", instanceName, true))
+        print(common.Message("WIT", "Debug - duration", format.Time(duration), true))
+        print(common.Message("WIT", "Debug - xpGained", format.Number(xpGained), true))
+        print(common.Message("WIT", "Debug - mobsKilled", format.Number(mobsKilled), true))
         return
     end
     
@@ -118,11 +120,11 @@ function ProcessInstanceCompletion()
         local xpToLevel = currentLevel > initialLevel and safe.UnitXPMax("player") or 
             (safe.UnitXPMax("player") - safe.UnitXP("player"))
 
-        print(common_format.Message("WIT", instanceName .. " completed in", format.Time(duration), false))
-        print(common_format.Message("WIT", "Mobs killed", format.Number(mobsKilled), true))
-        print(common_format.Message("WIT", "Average XP per mob", format.Number(math_floor(xpGained / mobsKilled)), true))
-        print(common_format.Message("WIT", "XP received", format.Number(xpGained), true))
-        print(common_format.Message("WIT", "Runs until next level", string_format("%.1f", xpToLevel / xpGained), true))
+        print(common.Message("WIT", instanceName .. " completed in", format.Time(duration), false))
+        print(common.Message("WIT", "Mobs killed", format.Number(mobsKilled), true))
+        print(common.Message("WIT", "Average XP per mob", format.Number(math_floor(xpGained / mobsKilled)), true))
+        print(common.Message("WIT", "XP received", format.Number(xpGained), true))
+        print(common.Message("WIT", "Runs until next level", string_format("%.1f", xpToLevel / xpGained), true))
         
         -- Reset state variables
         inInstance = false
@@ -149,35 +151,35 @@ function ProcessInstanceCompletion()
     
     -- Save run data to persistent storage
     if WITSavedData then
-        table_insert(WITSavedData.instances, instanceData)
+        tinsert(WITSavedData.instances, instanceData)
     else
-        print(common_format.ErrorMessage("WIT", "access saved data (corrupted or not initialized)"))
+        print(common.ErrorMessage("WIT", "access saved data (corrupted or not initialized)"))
         return
     end
     
     -- Get statistical data for comparisons
     local stats = utils.GetInstanceStats(instanceName)
     if not stats then
-        print(common_format.ErrorMessage("WIT", "retrieve instance statistics"))
+        print(common.ErrorMessage("WIT", "retrieve instance statistics"))
         return
     end
     local xpPerMob = math_floor(xpGained / mobsKilled)
     
     -- Display completion statistics if XP was gained
-    print(common_format.Message("WIT", instanceName .. " completed in", format.Time(duration), false))
+    print(common.Message("WIT", instanceName .. " completed in", format.Time(duration), false))
     if duration ~= stats.averageTime then
-        print(common_format.Message("WIT", "Average time", format.Time(stats.averageTime) .. 
+        print(common.Message("WIT", "Average time", format.Time(stats.averageTime) .. 
             format.TimeDifference(duration, stats.averageTime), true))
     end
     if duration ~= stats.fastestTime then
-        print(common_format.Message("WIT", "Fastest time", format.Time(stats.fastestTime) .. 
+        print(common.Message("WIT", "Fastest time", format.Time(stats.fastestTime) .. 
             format.TimeDifference(duration, stats.fastestTime), true))
     end
-    print(common_format.Message("WIT", "Mobs killed", format.Number(mobsKilled), true))
-    print(common_format.Message("WIT", "Average XP per mob", format.Number(xpPerMob), true))
-    print(common_format.Message("WIT", "XP received", format.Number(xpGained), true))
-    if xpGained ~= stats.averageXP then
-        print(common_format.Message("WIT", "Average XP received", format.Number(stats.averageXP) .. 
+    print(common.Message("WIT", "Mobs killed", format.Number(mobsKilled), true))
+    print(common.Message("WIT", "Average XP per mob", format.Number(xpPerMob), true))
+    print(common.Message("WIT", "XP received", format.Number(xpGained), true))
+    if stats.averageXP and xpGained ~= stats.averageXP then
+        print(common.Message("WIT", "Average XP received", format.Number(stats.averageXP) .. 
             format.XPDifference(xpGained, stats.averageXP), true))
     end
     
@@ -185,10 +187,10 @@ function ProcessInstanceCompletion()
     if not reachedMaxLevel then
         local xpToLevel = currentLevel > initialLevel and safe.UnitXPMax("player") or 
             (safe.UnitXPMax("player") - safe.UnitXP("player"))
-        local runsNeeded = xpToLevel / stats.averageXP
+        local runsNeeded = stats.averageXP and (xpToLevel / stats.averageXP) or 0
         
-        print(common_format.Message("WIT", "XP until next level", format.Number(xpToLevel), true))
-        print(common_format.Message("WIT", "Runs until next level", "~" .. string_format("%.1f", runsNeeded), true))
+        print(common.Message("WIT", "XP until next level", format.Number(xpToLevel), true))
+        print(common.Message("WIT", "Runs until next level", "~" .. string_format("%.1f", runsNeeded), true))
     end
 
     -- Reset all instance state variables after completion
@@ -221,7 +223,7 @@ WIT:SetScript("OnEvent", function(self, event, ...)
     if event == "ADDON_LOADED" and ... == addonName then
         local success = pcall(utils.InitializeSavedData)
         if not success then
-            print(common_format.ErrorMessage("WIT", "initialize saved data"))
+            print(common.ErrorMessage("WIT", "initialize saved data"))
             return
         end
         
@@ -261,7 +263,7 @@ WIT:SetScript("OnEvent", function(self, event, ...)
     elseif event == "ZONE_CHANGED_NEW_AREA" then        
         local success, isInstance, instanceType = pcall(IsInInstance)
         if not success then
-            print(common_format.ErrorMessage("WIT", "check instance status"))
+            print(common.ErrorMessage("WIT", "check instance status"))
             return
         end
 
@@ -277,7 +279,7 @@ WIT:SetScript("OnEvent", function(self, event, ...)
                 mobsKilled = 0
                 xpGained = 0
                 local stats = utils.GetInstanceStats(instanceName)
-                local fastestTime = stats and stats.fastest
+                local fastestTime = stats and stats.fastestTime
                 local timeMsg = fastestTime and format.Time(fastestTime) or "not recorded"
                 print(format.EnteringMessage(instanceName, timeMsg))
             else

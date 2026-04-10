@@ -1,11 +1,8 @@
 local addonName, addon = ...
 
--- Cache freqently used functions
+-- Cache frequently used functions
 local type = type
 local ipairs = ipairs
-
--- Import WarmaneCommonUtils from global scope
-local safe = _G.WarmaneCommonUtils.safe
 
 addon.utils = {
     -- Get NPC ID from dstGUID

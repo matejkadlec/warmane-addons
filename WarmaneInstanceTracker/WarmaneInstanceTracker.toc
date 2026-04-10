@@ -4,8 +4,8 @@
 ## Author: Matej Kadlec (https://github.com/matejkadlec)
 ## Version: 1.0
 ## SavedVariables: WITSavedData
-## Dependencies: WarmaneCommonUtils
 
+utils\CommonUtils.lua
 utils\AddonFormat.lua
 utils\BossData.lua
 utils\Utils.lua

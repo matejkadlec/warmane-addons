@@ -6,8 +6,8 @@ local math_floor = math.floor
 local math_abs = math.abs
 local string_format = string.format
 
--- Import common utils for base formatting
-local WCU = _G.WarmaneCommonUtils
+-- Import common utils from addon namespace
+local common = addon.common
 
 -- Define color codes
 local COLOR = {
@@ -18,9 +18,24 @@ local COLOR = {
 }
 
 addon.format = {
-    -- Format entering instance format with consistent coloring
+    -- Format seconds into human-readable time string (e.g. "5 min 30 sec")
+    Time = function(seconds)
+        if type(seconds) ~= "number" or seconds < 0 then return "0 sec" end
+        local mins = math_floor(seconds / 60)
+        local secs = math_floor(seconds % 60)
+        if mins > 0 then
+            return string_format("%d min %d sec", mins, secs)
+        end
+        return string_format("%d sec", secs)
+    end,
+
+    -- Format numbers with thousand separators
+    Number = function(number)
+        return common.Number(number)
+    end,
+
+    -- Format entering instance message with consistent coloring
     EnteringMessage = function(instanceName, timeMsg)
-        -- Validate input
         if type(instanceName) ~= "string" then return "" end
         
         return string_format("%s[WIT] %sEntering%s %s%s, fastest time:%s %s%s, good luck!|r",
@@ -69,6 +84,6 @@ addon.format = {
         local sign = currentXP > compareXP and "+" or "-"
         
         return string_format(" %s(%s%s)|r", 
-            color, sign, WCU.common_format.Number(diff))
+            color, sign, common.Number(diff))
     end
 }

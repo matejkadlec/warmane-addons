@@ -3,6 +3,5 @@
 ## Notes: Automatically switches Hunter tracking based on target type.
 ## Author: Matej Kadlec (https://github.com/matejkadlec)
 ## Version: 1.0
-## Dependencies: WarmaneCommonUtils
 
 WarmaneTrackingAid.lua

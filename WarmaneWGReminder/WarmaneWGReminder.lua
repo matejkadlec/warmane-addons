@@ -1,12 +1,32 @@
 local addonName, addon = ...
 
 -- Cache frequently used functions for better performance
+local type = type
 local GetGameTime = GetGameTime
 local math_floor = math.floor
+local string_format = string.format
 
--- Import WarmaneCommonUtils from global scope
-local WCU = _G.WarmaneCommonUtils
-local common_format = WCU.common_format
+-- Define color codes
+local COLOR = {
+    ORANGE = "|cFFFF8000",
+    YELLOW = "|cFFFFFF00"
+}
+
+-- Format general messages with prefix and optional value
+local function FormatMessage(prefix, msg, value, showColon)
+    if type(prefix) ~= "string" or type(msg) ~= "string" then return "" end
+    local formattedPrefix = string_format("%s[%s] ", COLOR.ORANGE, prefix)
+    if value then
+        if showColon then
+            return string_format("%s%s%s: %s%s|r",
+                formattedPrefix, COLOR.YELLOW, msg, COLOR.ORANGE, value)
+        else
+            return string_format("%s%s%s %s%s|r",
+                formattedPrefix, COLOR.YELLOW, msg, COLOR.ORANGE, value)
+        end
+    end
+    return string_format("%s%s%s|r", formattedPrefix, COLOR.YELLOW, msg)
+end
 
 -- Wintergrasp configuration constants
 local BATTLE_HOURS = {0, 3, 6, 9, 12, 15, 18, 21}
@@ -58,12 +78,12 @@ local function CheckTimeUntilNextBattle()
     if IsBattleHour(serverHour) and (serverMinute < BATTLE_DURATION) then       
         -- Announce battle start
         if IsBattleHour(serverHour) and serverMinute == 0 then
-            print(common_format.Message("WWR", "Battle for Wintergrasp has begun!"))
+            print(FormatMessage("WWR", "Battle for Wintergrasp has begun!"))
         end
     else
         -- Announce battle end
         if IsBattleHour(serverHour) and serverMinute == 30 then
-            print(common_format.Message("WWR", "Battle for Wintergrasp has ended."))
+            print(FormatMessage("WWR", "Battle for Wintergrasp has ended."))
             ResetReminders()
         end
         
@@ -75,7 +95,7 @@ local function CheckTimeUntilNextBattle()
         for _, minutes in ipairs(REMINDER_MINUTES) do
             -- Trigger reminder when we reach the exact minute threshold
             if minutesUntilBattle == minutes and not remindersSent[minutes] then
-                print(common_format.Message("WWR", "Battle for Wintergrasp starts in", minutes .. " minutes"))
+                print(FormatMessage("WWR", "Battle for Wintergrasp starts in", minutes .. " minutes"))
                 remindersSent[minutes] = true
             elseif minutesUntilBattle > minutes then
                 -- Reset reminder flag once we're past the window
