@@ -142,4 +142,4 @@ function HandleItemRef(link, text, button)
 end
 
 -- Print loading message
-print(string.format("|cFFFF8000Warmane|cFFFFFF00 Chat Copy loaded|r"))
+print(string.format("%s[WCC] %s%s|r", COLOR.ORANGE, COLOR.YELLOW, "WarmaneChatCopy loaded"))

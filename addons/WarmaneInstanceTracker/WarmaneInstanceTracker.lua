@@ -227,7 +227,7 @@ WIT:SetScript("OnEvent", function(self, event, ...)
             return
         end
         
-        print(string_format("|cFFFF8000Warmane|cFFFFFF00InstanceTracker loaded|r"))
+        print(common.Message("WIT", "WarmaneInstanceTracker loaded"))
         
     -- Handle combat events for boss kills and mob tracking
     elseif event == "COMBAT_LOG_EVENT_UNFILTERED" then        

@@ -2,6 +2,6 @@
 ## Title: |cFFFF8000Warmane|r Chat Copy
 ## Notes: Click on the channel name to copy the chat message.
 ## Author: Matej Kadlec (https://github.com/matejkadlec)
-## Version: 1.0
+## Version: 1.1
 
 WarmaneChatCopy.xml

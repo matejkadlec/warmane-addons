@@ -38,7 +38,7 @@ addon.format = {
     EnteringMessage = function(instanceName, timeMsg)
         if type(instanceName) ~= "string" then return "" end
         
-        return string_format("%s[WIT] %sEntering%s %s%s, fastest time:%s %s%s, good luck!|r",
+        return string_format("%s[WIT] %sEntering %s%s%s, fastest time: %s%s%s, good luck!|r",
             COLOR.ORANGE,               -- [WIT]
             COLOR.YELLOW,               -- Entering
             COLOR.ORANGE, instanceName, -- instanceName

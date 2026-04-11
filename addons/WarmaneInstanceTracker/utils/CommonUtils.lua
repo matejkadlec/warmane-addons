@@ -32,26 +32,24 @@ end
 -- Format general messages with prefix and optional value
 local function FormatMessage(prefix, msg, value, showColon)
     if type(prefix) ~= "string" or type(msg) ~= "string" then return "" end
-
-    local formattedPrefix = string_format("%s[%s] ", COLOR.ORANGE, prefix)
-
+    local formattedPrefix = string_format("%s[%s]", COLOR.ORANGE, prefix)
     if value then
         if showColon then
-            return string_format("%s%s%s: %s%s|r",
+            return string_format("%s %s%s: %s%s|r",
                 formattedPrefix, COLOR.YELLOW, msg, COLOR.ORANGE, value)
         else
-            return string_format("%s%s%s %s%s|r",
+            return string_format("%s %s%s %s%s|r",
                 formattedPrefix, COLOR.YELLOW, msg, COLOR.ORANGE, value)
         end
     end
-
-    return string_format("%s%s%s|r", formattedPrefix, COLOR.YELLOW, msg)
+    return string_format("%s %s%s|r", formattedPrefix, COLOR.YELLOW, msg)
 end
 
--- Format error messages in red color
+-- Format error messages with colored prefix and red body
 local function FormatErrorMessage(prefix, msg)
     if type(prefix) ~= "string" or type(msg) ~= "string" then return "" end
-    return string_format("%s[%s] Failed to %s|r", COLOR.RED, prefix, msg)
+    return string_format("%s[%s] %sFailed to %s|r",
+        COLOR.ORANGE, prefix, COLOR.RED, msg)
 end
 
 -- Safely get instance name with fallback to zone name

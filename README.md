@@ -13,7 +13,7 @@ A big thanks goes to the owner of [`3.3.5-interface-files`](https://github.com/w
 - [Available AddOns](#-available-addons)
   - [WarmaneTrackingAid](#warmanetrackingaid)
   - [WarmaneChatCopy](#warmanechatcopy)
-  - [WarmaneWGReminder](#warmanewgreminder) [WIP]
+  - [WarmaneWGReminder](#warmanewgreminder)
   - [WarmaneInstanceTracker](#warmaneinstancetracker) [WIP]
 - [Screenshots](#-screenshots)
 - [Installation](#️-installation)
@@ -36,27 +36,25 @@ A big thanks goes to the owner of [`3.3.5-interface-files`](https://github.com/w
 
 📋 Makes chat messages easily copyable.
 
-- Click on the channel name or into the message directly to copy messages into a new window
+- Click on the channel name or, if the message has no channel, into the message directly to copy messages into a new window
 - You can copy messages from the copy window with `CTRL-C`
 - Works with all message types (channels, system, say, ...)
 - Supports multiple messages in the copy window
 - Clear button to reset the copy window content
 
-### WarmaneWGReminder [WIP]
-
-⚠️ The reminder time has offset and the fix is not yet implemented.
+### WarmaneWGReminder
 
 ⏰ Reminds players about upcoming Wintergrasp battle.
 
-- Accurate Wintergrasp battle reminder
+- Uses the in-game `GetWintergraspWaitTime()` API for accurate battle timing
 - Shows notifications at 30, 15, and 5 minutes before battle
-  - Those values can be changed in `WarmaneWGReminder.lua`, line 13
 - Also shows notification right after the battle begins and ends
-- Check is performed each second
+- Slash command `/wwr when` to check time until next battle
+- Type `/wwr` or `/wwr help` for a list of available commands
 
 ### WarmaneInstanceTracker [WIP]
 
-⚠️ This addon has many known bugs and is not working properly. Don't use it unless you are programmer and want to fix the bugs.
+⚠️ This addon is under active development and may have bugs.
 
 - This addon is heavily inspired by [Nova Instance Tracker](https://www.curseforge.com/wow/addons/nova-instance-tracker).
 - The goal is to track player's dungeon times, mob kills, XP gains and more.
@@ -85,7 +83,7 @@ _Timely reminder for Wintergrasp battles to ensure you never miss one again._
 ## ⚙️ Installation
 
 1. Download the latest release
-2. Extract the addon folders to your `World of Warcraft 3.3.5a/Interface/AddOns` directory
+2. Extract the addon folders from the `addons/` directory to your `World of Warcraft 3.3.5a/Interface/AddOns` directory
 3. Ensure addon names match exactly (case-sensitive)
 4. Restart WoW if it was running
 

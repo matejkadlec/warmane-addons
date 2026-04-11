@@ -17,19 +17,14 @@ local COLOR = {
 }
 
 -- Format general messages with prefix and optional value
-local function FormatMessage(prefix, msg, value, showColon)
+local function FormatMessage(prefix, msg, value)
     if type(prefix) ~= "string" or type(msg) ~= "string" then return "" end
-    local formattedPrefix = string_format("%s[%s] ", COLOR.ORANGE, prefix)
+    local formattedPrefix = string_format("%s[%s]", COLOR.ORANGE, prefix)
     if value then
-        if showColon then
-            return string_format("%s%s%s: %s%s|r",
-                formattedPrefix, COLOR.YELLOW, msg, COLOR.ORANGE, value)
-        else
-            return string_format("%s%s%s %s%s|r",
-                formattedPrefix, COLOR.YELLOW, msg, COLOR.ORANGE, value)
-        end
+        return string_format("%s %s%s %s%s|r",
+            formattedPrefix, COLOR.YELLOW, msg, COLOR.ORANGE, value)
     end
-    return string_format("%s%s%s|r", formattedPrefix, COLOR.YELLOW, msg)
+    return string_format("%s %s%s|r", formattedPrefix, COLOR.YELLOW, msg)
 end
 
 -- Define tracking spells and their corresponding creature types
@@ -88,7 +83,7 @@ WTA:SetScript("OnEvent", function(self, event, ...)
         end
         
         -- Print loading message
-        print(string_format("|cFFFF8000Warmane|cFFFFFF00TrackingAid loaded|r"))
+        print(FormatMessage("WTA", "WarmaneTrackingAid loaded"))
         
         -- Register target change event only for hunters
         self:RegisterEvent("PLAYER_TARGET_CHANGED")
@@ -121,13 +116,14 @@ WTA:SetScript("OnEvent", function(self, event, ...)
                         
                         local _, _, icon = GetSpellInfo(trackingSpell)
                         if icon then
-                            print(FormatMessage("WTA", "Switched to", trackingSpell, true))
+                            -- Extract creature type name from spell (e.g. "Track Humanoids" -> "Humanoids")
+                            local creatureTypeName = trackingSpell:gsub("Track ", "")
+                            print(FormatMessage("WTA", "Switched to track", creatureTypeName))
                         end
                     else
+                        -- Notify player about GCD cooldown
                         local remainingTime = GCD_DELAY - timeSinceLastCast
-                        local timeText = remainingTime >= 1 and 
-                            string_format("%.1f |cFFFFFF00second|r", remainingTime) or
-                            string_format("%.1f |cFFFFFF00seconds|r", remainingTime)
+                        local timeText = string_format("%.1f seconds", remainingTime)
                         print(FormatMessage("WTA", "You need to wait", timeText))
                     end
                 end

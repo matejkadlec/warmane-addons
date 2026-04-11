@@ -2,7 +2,7 @@
 ## Title: |cFFFF8000Warmane|r Instance Tracker
 ## Notes: Tracks instance run times, mobs killed and XP gains.
 ## Author: Matej Kadlec (https://github.com/matejkadlec)
-## Version: 1.0
+## Version: 1.1
 ## SavedVariables: WITSavedData
 
 utils\CommonUtils.lua
