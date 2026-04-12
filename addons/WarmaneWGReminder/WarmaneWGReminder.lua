@@ -143,7 +143,7 @@ local function CheckBattleStatus()
         -- nil means battle is active or API unavailable
         if lastWaitTime and not battleActive and initialCheckDone then
             -- Transition: had countdown, now nil → battle started (only notify if we were online)
-            print(FormatMessage("WWR", "Battle for Wintergrasp has begun!"))
+            print(FormatMessage("WWR", "Battle for Wintergrasp has started!"))
         end
         if lastWaitTime and not battleActive then
             battleActive = true
@@ -190,16 +190,16 @@ end)
 -- Print help text listing available slash commands
 local function PrintHelp()
     print(FormatMessage("WWR", "Available commands:"))
-    print(string_format("  %s/wwr when %s- Prints the time until the next Wintergrasp battle|r", COLOR.ORANGE, COLOR.YELLOW))
+    print(string_format("  %s/wwr when %s- Prints the time until the next battle for Wintergrasp|r", COLOR.ORANGE, COLOR.YELLOW))
 end
 
 -- Handle the /wwr when subcommand
 local function HandleWhen()
     local waitTime = GetTimeUntilBattle()
     if waitTime then
-        print(FormatMessage("WWR", "Next Wintergrasp battle in", FormatTime(waitTime)))
+        print(FormatMessage("WWR", "Next battle for Wintergrasp starts in", FormatTime(waitTime)))
     elseif battleActive then
-        print(FormatMessage("WWR", "Wintergrasp battle is active right now!"))
+        print(FormatMessage("WWR", "Battle for Wintergrasp is active right now!"))
     else
         print(FormatErrorMessage("WWR", "retrieve Wintergrasp timer data"))
     end
