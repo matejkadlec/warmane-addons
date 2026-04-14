@@ -1,4 +1,5 @@
 local addonName, addon = ...
+local pairs = pairs
 
 addon.DUNGEON_FINAL_BOSSES = {
     --==========================================================================--
@@ -139,3 +140,30 @@ addon.DUNGEON_FINAL_BOSSES = {
     -- Love is in the Air
     [36296] = "Shadowfang Keep", -- Apothecary Hummel
 }
+
+-- Known boss NPC IDs used for boss-only debug output
+addon.DUNGEON_DEBUG_BOSSES = {}
+
+for npcId, _ in pairs(addon.DUNGEON_FINAL_BOSSES) do
+    addon.DUNGEON_DEBUG_BOSSES[npcId] = true
+end
+
+-- Extra non-final bosses for low-level instances commonly used in tests
+-- Ragefire Chasm
+addon.DUNGEON_DEBUG_BOSSES[11517] = true -- Oggleflint
+addon.DUNGEON_DEBUG_BOSSES[11518] = true -- Jergosh the Invoker
+addon.DUNGEON_DEBUG_BOSSES[11520] = true -- Taragaman the Hungerer
+-- The Deadmines
+addon.DUNGEON_DEBUG_BOSSES[644] = true -- Rhahk'Zor
+addon.DUNGEON_DEBUG_BOSSES[643] = true -- Sneed
+addon.DUNGEON_DEBUG_BOSSES[1763] = true -- Gilnid
+addon.DUNGEON_DEBUG_BOSSES[646] = true -- Mr. Smite
+addon.DUNGEON_DEBUG_BOSSES[647] = true -- Captain Greenskin
+-- Wailing Caverns
+addon.DUNGEON_DEBUG_BOSSES[3653] = true -- Kresh
+addon.DUNGEON_DEBUG_BOSSES[3669] = true -- Lord Cobrahn
+addon.DUNGEON_DEBUG_BOSSES[3670] = true -- Lord Pythas
+addon.DUNGEON_DEBUG_BOSSES[3671] = true -- Lady Anacondra
+addon.DUNGEON_DEBUG_BOSSES[3672] = true -- Verdan the Everliving
+addon.DUNGEON_DEBUG_BOSSES[3673] = true -- Lord Serpentis
+addon.DUNGEON_DEBUG_BOSSES[3674] = true -- Skum

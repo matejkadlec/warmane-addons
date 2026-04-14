@@ -4,6 +4,7 @@ local originalSetItemRef
 
 -- Cache frequently used functions
 local gsub = gsub
+local strfind = strfind
 local strsub = strsub
 
 -- Import color codes
@@ -30,6 +31,8 @@ function Initialize()
 end
 
 function HandleFrameEvent(self, event, ...)
+    -- Keep last dispatched event so message wrapping can apply event-specific rules.
+    self.wccLastEvent = event
     originalChatFrame(self, event, ...)
     
     if not self.originalMessage then 
@@ -38,9 +41,31 @@ function HandleFrameEvent(self, event, ...)
     end
 end
 
-function HandleMessage(frame, msg, r, g, b, id)
+-- Skip copy-wrapping for no-channel loot lines so item links stay tooltip-clickable.
+local function ShouldBypassCopyWrap(frame, message)
+    if type(message) ~= "string" then
+        return false
+    end
+    if not frame or frame.wccLastEvent ~= "CHAT_MSG_LOOT" then
+        return false
+    end
+    if not strfind(message, "|Hitem:", 1, true) then
+        return false
+    end
+    if strfind(message, "|Hchannel:", 1, true) then
+        return false
+    end
+    return true
+end
+
+function HandleMessage(frame, msg, r, g, b, id, ...)
+    if ShouldBypassCopyWrap(frame, msg) then
+        frame:originalMessage(msg, r, g, b, id, ...)
+        return
+    end
+
     local newMsg = "|Hcopy"..ProcessMessage(msg).."|h" .. msg .. "|h"
-    frame:originalMessage(newMsg, r, g, b, id)
+    frame:originalMessage(newMsg, r, g, b, id, ...)
 end
 
 function ProcessMessage(message)
@@ -116,7 +141,7 @@ function ProcessMessage(message)
 	return msg
 end
 
-function HandleItemRef(link, text, button)
+function HandleItemRef(link, text, button, chatFrame)
     if strsub(link, 1, 4) == "copy" then
         local decodedMessage = gsub(gsub(strsub(link, 5), "/2", "|"), "/1", "/")
         
@@ -138,7 +163,7 @@ function HandleItemRef(link, text, button)
         return
     end
     
-    originalSetItemRef(link, text, button)
+    originalSetItemRef(link, text, button, chatFrame)
 end
 
 -- Print loading message

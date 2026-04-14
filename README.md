@@ -11,10 +11,10 @@ A big thanks goes to the owner of [`3.3.5-interface-files`](https://github.com/w
 ## 📋 Table of Contents
 
 - [Available AddOns](#-available-addons)
+  - [WarmaneInstanceTracker](#warmaneinstancetracker-wip)
   - [WarmaneTrackingAid](#warmanetrackingaid)
   - [WarmaneChatCopy](#warmanechatcopy)
   - [WarmaneWGReminder](#warmanewgreminder)
-  - [WarmaneInstanceTracker](#warmaneinstancetracker) [WIP]
 - [Screenshots](#-screenshots)
 - [Installation](#️-installation)
 - [Feedback & Development](#-feedback--development)
@@ -22,6 +22,23 @@ A big thanks goes to the owner of [`3.3.5-interface-files`](https://github.com/w
 - [Support](#-support)
 
 ## 📦 Available AddOns
+
+### WarmaneInstanceTracker
+
+- This addon is heavily inspired by [Nova Instance Tracker](https://www.curseforge.com/wow/addons/nova-instance-tracker).
+- Tracks completed dungeon runs and stores both run history and aggregated per-character/per-instance stats.
+- Main table UI (`/wit`) shows: `Character | Instance | Total Runs | Average XP | Average Time | Fastest Time`.
+- Instance names in the table include level ranges (i.e. `Wailing Caverns (15-25)`)
+- Settings window (`/wit config`) includes persistent checkboxes:
+  - User settings: instance tracking, party completion message
+  - Developer settings: debug printing, debug logging
+- Debug commands (`/wit debug ...`) include `on|off`, `state`, `target`, `simulate "Instance Name" duration xp`, and `log on|off|status|clear`.
+- On completion, can post one summary line to party chat:
+  - `[WIT] <instance> finished in <hh:mm:ss> | XP gained: <xp> | Runs till next level: <value>`
+- SavedVariables are split for clarity:
+  - `InstancesData` (runs + aggregated stats)
+  - `SettingsData` (user/developer toggles)
+  - `DebugData` (debug death log)
 
 ### WarmaneTrackingAid
 
@@ -49,18 +66,17 @@ A big thanks goes to the owner of [`3.3.5-interface-files`](https://github.com/w
 - Uses the in-game `GetWintergraspWaitTime()` API for accurate battle timing
 - Shows notifications at 30, 15, and 5 minutes before battle
 - Also shows notification right after the battle begins and ends
+- Addon logic is active only on level 80 characters
 - Slash command `/wwr when` to check time until next battle
 - Type `/wwr` or `/wwr help` for a list of available commands
 
-### WarmaneInstanceTracker [WIP]
-
-⚠️ This addon is under active development and may have bugs.
-
-- This addon is heavily inspired by [Nova Instance Tracker](https://www.curseforge.com/wow/addons/nova-instance-tracker).
-- The goal is to track player's dungeon times, mob kills, XP gains and more.
-- Once the main goal is achieved, there is also huge room for expanding functionality both in breadth (i.e. adding raids) and in depth (i.e. more statistics).
-
 ## 📸 Screenshots
+
+### WarmaneInstanceTracker
+
+![Instance Tracker Demo](screenshots/instance-tracker-demo.png)
+
+_A clean in-game table tracking your dungeon runs with relevant data, turning every run into visible progress._
 
 ### WarmaneTrackingAid
 

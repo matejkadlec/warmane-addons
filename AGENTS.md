@@ -21,7 +21,11 @@
     (but if even one change was done to ANY file, then include it)
 - Remind the user to replace the updated AddOn in their WoW folder only after making changes to addon files (below the Summary)
   - Only include this reminder when changing addon files, inside `addons/` folder
-  - "Please update your {AddOn Name} with the newest version for this changes to take effect in-game."
+  - "Please update your {AddOn Name} with the newest version and {run "/reload"}/{restart the game}
+    for this changes to take effect in-game."
+    - the "run "/reload"" or "restart the game" text will depends what changes were done and whether
+      /reload is enough, or if full restart is needed (added/removed Lua files, changed to TOC file, ...)
+    - if `.toc` file was changed, always use **restart the game** (do not use `/reload`)
   - Whole message bold
 
 ### Interpretation Rules
@@ -52,7 +56,6 @@
 - Avoid unnecessary abstractions
 - Keep code simple and compatible with Lua used in 3.3.5a
 - Add simple yet descriptive one line comments to the code
-- Bump `## Version:` in all `.toc` files when publishing changes
 
 ---
 
@@ -99,6 +102,7 @@
 - NEVER assume retail API exists
 - If unsure:
   - search in `3.3.5-interface-files/`
+  - search in https://github.com/widxwer/Questie
   - if not found → say it's unsupported
 
 ---
@@ -116,14 +120,7 @@ When implementing features:
 
 ## External Sources
 
+- https://github.com/widxwer/Questie
 - https://www.wowhead.com/wotlk
-
----
-
-## Notes
-
-- You can add more relevant links of website sources to [External Sources](#-external-sources) during
-  develompent without asking the user for permission
-- If a high-quality 3.3.5a-compatible source (like a full API dump or addon pack) is found:
-  - DO NOT auto-import
-  - Suggest it in chat for manual review
+- https://wowpedia.fandom.com/wiki/
+- https://us.forums.blizzard.com/en/wow/
