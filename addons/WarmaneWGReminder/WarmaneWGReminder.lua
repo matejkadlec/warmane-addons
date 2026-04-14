@@ -5,6 +5,7 @@ local type = type
 local pcall = pcall
 local math_floor = math.floor
 local string_format = string.format
+local UnitLevel = UnitLevel
 
 -- Define color codes
 local COLOR = {
@@ -33,6 +34,7 @@ end
 
 -- Reminder thresholds in minutes before battle
 local REMINDER_MINUTES = {30, 15, 5}
+local REQUIRED_LEVEL = 80
 
 -- Polling interval in seconds
 local CHECK_INTERVAL = 5
@@ -45,6 +47,7 @@ local remindersSent = {}
 local lastWaitTime = nil
 local battleActive = false
 local initialCheckDone = false
+local reminderActive = false
 
 -- Resets all reminder flags for the next battle cycle
 local function ResetReminders()
@@ -154,36 +157,73 @@ local function CheckBattleStatus()
     initialCheckDone = true
 end
 
+-- True only for characters where this addon should be active
+local function IsReminderAllowedForLevel()
+    return type(UnitLevel) == "function" and UnitLevel("player") == REQUIRED_LEVEL
+end
+
+-- Start reminder polling and initialize runtime state
+local function ActivateReminder(self)
+    if reminderActive then
+        return
+    end
+
+    if not GetWintergraspWaitTime then
+        print(FormatMessage("WWR", "Wintergrasp timer API unavailable"))
+        return
+    end
+
+    InitializeReminders()
+    self.timer = 0
+    self:SetScript("OnUpdate", function(frameRef, elapsed)
+        frameRef.timer = (frameRef.timer or 0) + elapsed
+        if frameRef.timer >= CHECK_INTERVAL then
+            CheckBattleStatus()
+            frameRef.timer = 0
+        end
+    end)
+
+    reminderActive = true
+    print(FormatMessage("WWR", "WarmaneWGReminder loaded"))
+end
+
+-- Stop reminder polling and clear transient state
+local function DeactivateReminder(self)
+    self:SetScript("OnUpdate", nil)
+    self.timer = 0
+    reminderActive = false
+    ResetReminders()
+    lastWaitTime = nil
+    battleActive = false
+    initialCheckDone = false
+end
+
+-- Apply activation state based on current character level
+local function RefreshReminderActivation(self)
+    if IsReminderAllowedForLevel() then
+        ActivateReminder(self)
+    else
+        DeactivateReminder(self)
+    end
+end
+
 -- Register required events
 frame:RegisterEvent("ADDON_LOADED")
 frame:RegisterEvent("PLAYER_LEAVING_WORLD")
+frame:RegisterEvent("PLAYER_ENTERING_WORLD")
+frame:RegisterEvent("PLAYER_LEVEL_UP")
 
 -- Event handler
 frame:SetScript("OnEvent", function(self, event, ...)
     if event == "ADDON_LOADED" and ... == addonName then
-        -- Check if GetWintergraspWaitTime API is available
-        if not GetWintergraspWaitTime then
-            print(FormatMessage("WWR", "Wintergrasp timer API unavailable"))
-            return
-        end
-
-        -- Initialize reminder state based on current timer
-        InitializeReminders()
-
-        -- Set up periodic battle status checks
-        self:SetScript("OnUpdate", function(self, elapsed)
-            self.timer = (self.timer or 0) + elapsed
-            if self.timer >= CHECK_INTERVAL then
-                CheckBattleStatus()
-                self.timer = 0
-            end
-        end)
-
-        -- Show addon loaded message
-        print(FormatMessage("WWR", "WarmaneWGReminder loaded"))
+        RefreshReminderActivation(self)
+    elseif event == "PLAYER_ENTERING_WORLD" or event == "PLAYER_LEVEL_UP" then
+        RefreshReminderActivation(self)
     elseif event == "PLAYER_LEAVING_WORLD" then
         -- Clean up timer before logout/reload
         self:SetScript("OnUpdate", nil)
+        self.timer = 0
+        reminderActive = false
     end
 end)
 
@@ -195,6 +235,11 @@ end
 
 -- Handle the /wwr when subcommand
 local function HandleWhen()
+    if not reminderActive then
+        print(FormatMessage("WWR", "Addon is active only at level", tostring(REQUIRED_LEVEL)))
+        return
+    end
+
     local waitTime = GetTimeUntilBattle()
     if waitTime then
         print(FormatMessage("WWR", "Next battle for Wintergrasp starts in", FormatTime(waitTime)))
