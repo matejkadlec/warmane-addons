@@ -1,10 +1,11 @@
 # Warmane AddOns Collection
 
+![Language](https://img.shields.io/badge/language-Lua-2C2D72.svg)
 ![WoW Version](https://img.shields.io/badge/WoW-3.3.5a-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![Status](https://img.shields.io/badge/status-active-brightgreen.svg)
 
-Collection of custom World of Warcraft addons specifically developed for Warmane's WotLK (3.3.5a) servers.
+Collection of custom World of Warcraft AddOns specifically developed for Warmane's WotLK (3.3.5a) servers.
 
 A big thanks goes to the owner of [`3.3.5-interface-files`](https://github.com/wowgaming/3.3.5-interface-files) GitHub repository, which I'm using a lot during the development.
 
@@ -15,6 +16,7 @@ A big thanks goes to the owner of [`3.3.5-interface-files`](https://github.com/w
   - [WarmaneTrackingAid](#warmanetrackingaid)
   - [WarmaneChatCopy](#warmanechatcopy)
   - [WarmaneWGReminder](#warmanewgreminder)
+  - [WarmaneNotAway](#warmanenotaway)
 - [Screenshots](#-screenshots)
 - [Installation](#️-installation)
 - [Feedback & Development](#-feedback--development)
@@ -25,8 +27,8 @@ A big thanks goes to the owner of [`3.3.5-interface-files`](https://github.com/w
 
 ### WarmaneInstanceTracker
 
-- This addon is heavily inspired by [Nova Instance Tracker](https://www.curseforge.com/wow/addons/nova-instance-tracker).
-- Tracks completed dungeon runs and stores both run history and aggregated per-character/per-instance stats.
+📋 Tracks completed dungeon runs and stores both run history and aggregated per-character/per-instance stats.
+
 - Main table UI (`/wit`) shows: `Character | Instance | Total Runs | Average XP | Average Time | Fastest Time`.
 - Instance names in the table include level ranges (i.e. `Wailing Caverns (15-25)`)
 - Settings window (`/wit config`) includes persistent checkboxes:
@@ -51,12 +53,14 @@ A big thanks goes to the owner of [`3.3.5-interface-files`](https://github.com/w
 
 ### WarmaneChatCopy
 
-📋 Makes chat messages easily copyable.
+📄 Makes chat messages copyable on mouse click.
 
-- Click on the channel name or, if the message has no channel, into the message directly to copy messages into a new window
+- Click on a channel name to copy the message into a new window
+  - For messages without a channel, click into the message directly instead
 - You can copy messages from the copy window with `CTRL-C`
 - Works with all message types (channels, system, say, ...)
-- Supports multiple messages in the copy window
+- Does not intervene with item or quest links, usernames, etc.
+- Copying more messages makes them appear under eachother in the click order
 - Clear button to reset the copy window content
 
 ### WarmaneWGReminder
@@ -69,6 +73,15 @@ A big thanks goes to the owner of [`3.3.5-interface-files`](https://github.com/w
 - Addon logic is active only on level 80 characters
 - Slash command `/wwr when` to check time until next battle
 - Type `/wwr` or `/wwr help` for a list of available commands
+
+### WarmaneNotAway
+
+🟢 Automatically clears your `<Away>` status when you become active.
+
+- This _should be_ WoW's default behvaior, but I've been having problems with it on Warmane
+- Uses Blizzard's built-in `autoClearAFK` option to keep behavior safe and lightweight
+- Re-enables AFK auto-clear when the AddOn loads and when entering the world
+- No key listener, no polling loop, and no manual `/afk` simulation
 
 ## 📸 Screenshots
 
@@ -96,38 +109,50 @@ _Separate window to copy any message from the chat, created by clicking on the c
 
 _Timely reminder for Wintergrasp battles to ensure you never miss one again._
 
+### WarmaneNotAway
+
+![Not Away Demo](screenshots/not-away-demo.png)
+
+_No more getting stuck with `<Away>` above your name after you are already back in action._
+
 ## ⚙️ Installation
 
 1. Download the latest release
-2. Extract the addon folders from the `addons/` directory to your `World of Warcraft 3.3.5a/Interface/AddOns` directory
-3. Ensure addon names match exactly (case-sensitive)
+2. Extract the AddOn folders from the `addons/` directory to your `World of Warcraft 3.3.5a/Interface/AddOns` directory
+3. Ensure AddOn names match exactly (case-sensitive)
 4. Restart WoW if it was running
 
-All addons are standalone, install only the ones you want to use.
+All AddOns are standalone, install only the ones you want to use.
 
-## 💡 Feedback & Development
+## 💡 Feedback
 
-- This project is actively being developed.
-- Feel free to open issues or submit PRs, contributions are welcome.
-- You can link this repo if you use it in your project, but it's not required.
+This project is being under active develompent as of April 2026.
+
+- If you encounter a bug or have a feature request for existing AddOn, open a GitHub issue
+- If you have an AddOn idea, you can email me on `info@matejkadlec.cz`
+  - If I'll find it interesting, there's a good chance I will create it for you for a voluntary donation
+  - If I don't find it interesting, I can still do it for a fixed price (I can provide an invoice)
+- Feel free to you use any of my AddOns in your project, in that case a link back to this repository is appreciated
 
 ## 🤝 Contributing
 
-- As stated in section above, contributors are welcome.
-- Some general rules for any PR, as we don't want any spaghetti code:
-  - Follow Lua language conventions and WoW addon development best practices
+- Contributors are welcome, just create a PR and assign it to me for a review
+- Some general rules for all PRs, as we don't want any spaghetti code:
+  - Follow Lua language conventions and WoW AddOn development best practices
+    - If you code in VSCode, I highly recommend [WoW Bundle](https://marketplace.visualstudio.com/items?itemName=Septh.wow-bundle) extension
   - Use PascalCase for function names and camelCase for variable names
   - Comment your code
   - Update this file so the description and screenshot correspond to the latest AddOn version
-- Additional rules for for <b>completely new</b> AddOns for this repo:
+- Additional rules for for **completely new** AddOns for this repository:
+  1. Follow the naming format `Warmane[Addon][Name]` for consistency
+  2. Each AddOn must be fully standalone with no cross-AddOn dependencies
+  3. Required `.toc` file attributes:
+     ```ini
+     ## X-Collaboration: Matej Kadlec (https://github.com/matejkadlec)
+     ## X-Repository: https://github.com/matejkadlec/warmane-addons
+     ```
 
-1. Addon Naming Requirements:
-   - Follow the format `Warmane[Addon][Name]` for consistency
-   - Exactly three words, first always being "Warmane"
-
-2. Each addon must be fully standalone with no cross-addon dependencies
-
-- Otherwise, there are no rules for branch names etc., just make it that the commit messages make sense.
+- Otherwise, there are no rules for branch names etc., just make it that the commit messages make sense
 
 ---
 

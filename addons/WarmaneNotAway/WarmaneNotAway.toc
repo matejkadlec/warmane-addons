@@ -1,0 +1,7 @@
+## Interface: 30300
+## Title: |cFFFF8000Warmane|r Not Away
+## Notes: Automatically clears your Away status when you become active.
+## Author: Matej Kadlec (https://github.com/matejkadlec)
+## Version: 1.0
+
+WarmaneNotAway.lua
