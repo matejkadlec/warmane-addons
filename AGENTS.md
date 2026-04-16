@@ -19,6 +19,10 @@
   - Only mention core/bigger changes (for smaller changes overall, mention the small change)
   - Do not include a summary when only answering a question and making no changes to any files
     (but if even one change was done to ANY file, then include it)
+- After changing any addon files inside `addons/`, run `scripts/sync-addons.sh` before replying to the user
+  - The script loads developer-specific paths from `.env.sync-addons`
+  - The template file `.env.sync-addons.example` shows the required variables
+  - The script syncs each top-level addon folder that contains a `.toc` file, including all nested files and subfolders inside it
 - Remind the user to replace the updated AddOn in their WoW folder only after making changes to addon files (below the Summary)
   - Only include this reminder when changing addon files, inside `addons/` folder
   - "Please update your {AddOn Name} with the newest version and {run "/reload"}/{restart the game}

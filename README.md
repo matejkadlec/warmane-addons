@@ -19,9 +19,9 @@ A big thanks goes to the owner of [`3.3.5-interface-files`](https://github.com/w
   - [WarmaneNotAway](#warmanenotaway)
 - [Screenshots](#-screenshots)
 - [Installation](#️-installation)
-- [Feedback & Development](#-feedback--development)
+- [Feedback](#-feedback)
 - [Contributing](#-contributing)
-- [Support](#-support)
+  - [Development Sync](#️-development-sync)
 
 ## 📦 Available AddOns
 
@@ -153,6 +153,24 @@ This project is being under active develompent as of April 2026.
      ```
 
 - Otherwise, there are no rules for branch names etc., just make it that the commit messages make sense
+
+### 🔄️ Development Sync
+
+If you are developing the AddOns, you can sync the whole `addons/` directory into your WoW client with the helper script:
+
+1. Copy `.env.sync-addons.example` to `.env.sync-addons`
+2. Set `SYNC_ADDONS_DEST_DIR` to the absolute path of your `Interface/AddOns` folder
+3. Decide whether `SYNC_ADDONS_AUTO_INSTALL_RSYNC` should be `true` or `false`
+   - Set it to `true` if you want the script to try installing `rsync` automatically with `apt-get`
+   - Set it to `false` if you prefer the script to skip installation attempts and use `cp` fallback when needed
+4. Run `./scripts/sync-addons.sh`
+
+Optional variables:
+
+- `SYNC_ADDONS_SOURCE_DIR` if your source `addons/` directory lives somewhere else
+- `SYNC_ADDONS_RSYNC_BIN` if you want to point to a specific `rsync` binary
+
+The real `.env.sync-addons` file is ignored by Git, while `.env.sync-addons.example` stays in the repository as the shared template.
 
 ---
 
