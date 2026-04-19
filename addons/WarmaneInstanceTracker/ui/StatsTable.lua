@@ -31,6 +31,7 @@ addon.ui.CreateStatsTable = function(options)
     local statsRowsData = {}
     local statsEmptyText = nil
     local instanceLevelRangesByName = nil
+    local configuredLevelRanges = addon.DUNGEON_LEVEL_RANGES or {}
 
     local function BuildInstanceLevelRanges()
         local ranges = {}
@@ -87,6 +88,9 @@ addon.ui.CreateStatsTable = function(options)
 
         local range = instanceLevelRangesByName[rawName]
         if type(range) ~= "table" then
+            range = configuredLevelRanges[rawName]
+        end
+        if type(range) ~= "table" then
             return rawName
         end
 
@@ -96,7 +100,7 @@ addon.ui.CreateStatsTable = function(options)
             return rawName
         end
 
-        return string_format("%s (%d-%d)", rawName, minLevel, maxLevel)
+        return string_format("%s (%d - %d)", rawName, minLevel, maxLevel)
     end
 
     local function FormatNumberWithCommas(number)
@@ -193,7 +197,7 @@ addon.ui.CreateStatsTable = function(options)
         end
 
         statsFrame = CreateFrame("Frame", frameNames.stats, UIParent)
-        statsFrame:SetWidth(720)
+        statsFrame:SetWidth(800)
         statsFrame:SetHeight(360)
         statsFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
         statsFrame:SetFrameStrata("DIALOG")

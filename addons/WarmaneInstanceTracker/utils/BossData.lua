@@ -16,19 +16,19 @@ addon.DUNGEON_FINAL_BOSSES = {
     -- Blackfathom Deeps
     [4829] = "Blackfathom Deeps", -- Aku'mai
     -- Stockades
-    [1663] = "The Stockade", -- Dextren Ward
+    [1716] = "The Stockade", -- Bazil Thredd
     -- Gnomeregan
     [7800] = "Gnomeregan", -- Mekgineer Thermaplugg
     -- Razorfen Kraul
     [4421] = "Razorfen Kraul", -- Charlga Razorflank
     -- Scarlet Monastery Graveyard
-    [4543] = "Scarlet Monastery", -- Bloodmage Thalnos
+    [4543] = "Scarlet Monastery - Graveyard", -- Bloodmage Thalnos
     -- Scarlet Monastery Library
-    [6487] = "Scarlet Monastery", -- Arcanist Doan
+    [6487] = "Scarlet Monastery - Library", -- Arcanist Doan
     -- Scarlet Monastery Armory
-    [3975] = "Scarlet Monastery", -- Herod
+    [3975] = "Scarlet Monastery - Armory", -- Herod
     -- Scarlet Monastery Cathedral
-    [3976] = "Scarlet Monastery", -- Scarlet Commander Mograine
+    [3976] = "Scarlet Monastery - Cathedral", -- Scarlet Commander Mograine
     -- Razorfen Downs
     [7358] = "Razorfen Downs", -- Amnennar the Coldbringer
     -- Uldaman
@@ -141,6 +141,22 @@ addon.DUNGEON_FINAL_BOSSES = {
     [36296] = "Shadowfang Keep", -- Apothecary Hummel
 }
 
+-- Map wing names back to live zone names for clients that report only the parent zone
+addon.DUNGEON_BASE_INSTANCE_NAMES = {
+    ["Scarlet Monastery - Graveyard"] = "Scarlet Monastery",
+    ["Scarlet Monastery - Library"] = "Scarlet Monastery",
+    ["Scarlet Monastery - Armory"] = "Scarlet Monastery",
+    ["Scarlet Monastery - Cathedral"] = "Scarlet Monastery",
+}
+
+-- Warmane RDF level brackets used when the client LFD table is unavailable
+addon.DUNGEON_LEVEL_RANGES = {
+    ["Scarlet Monastery - Graveyard"] = { minLevel = 27, maxLevel = 37 },
+    ["Scarlet Monastery - Library"] = { minLevel = 29, maxLevel = 39 },
+    ["Scarlet Monastery - Armory"] = { minLevel = 32, maxLevel = 42 },
+    ["Scarlet Monastery - Cathedral"] = { minLevel = 35, maxLevel = 45 },
+}
+
 -- Known boss NPC IDs used for boss-only debug output
 addon.DUNGEON_DEBUG_BOSSES = {}
 
@@ -149,6 +165,8 @@ for npcId, _ in pairs(addon.DUNGEON_FINAL_BOSSES) do
 end
 
 -- Extra non-final bosses for low-level instances commonly used in tests
+-- The Stockade
+addon.DUNGEON_DEBUG_BOSSES[1663] = true -- Dextren Ward
 -- Ragefire Chasm
 addon.DUNGEON_DEBUG_BOSSES[11517] = true -- Oggleflint
 addon.DUNGEON_DEBUG_BOSSES[11518] = true -- Jergosh the Invoker

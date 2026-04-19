@@ -28,19 +28,6 @@ local function IsValidText(value)
     return type(value) == "string" and value ~= ""
 end
 
--- Check if a table has at least one key
-local function IsTableEmpty(tbl)
-    if type(tbl) ~= "table" then
-        return true
-    end
-
-    for _, _ in pairs(tbl) do
-        return false
-    end
-
-    return true
-end
-
 -- Ensure saved variable roots exist and keep expected table shapes
 local function EnsureSavedVariableTables()
     if type(InstancesData) ~= "table" then
@@ -62,37 +49,6 @@ local function EnsureSavedVariableTables()
 
     if type(DebugData.deathLog) ~= "table" then
         DebugData.deathLog = {}
-    end
-end
-
--- Migrate legacy monolithic saved data into split saved variables
-local function MigrateLegacySavedData()
-    if type(WITSavedData) ~= "table" then
-        return
-    end
-
-    if IsTableEmpty(InstancesData.instances) and type(WITSavedData.instances) == "table" then
-        InstancesData.instances = WITSavedData.instances
-    end
-
-    if IsTableEmpty(InstancesData.instanceStats) and type(WITSavedData.instanceStats) == "table" then
-        InstancesData.instanceStats = WITSavedData.instanceStats
-    end
-
-    if type(InstancesData.statsSchemaVersion) ~= "number" and type(WITSavedData.statsSchemaVersion) == "number" then
-        InstancesData.statsSchemaVersion = WITSavedData.statsSchemaVersion
-    end
-
-    if SettingsData.enableDebugPrinting == nil and type(WITSavedData.debugModeEnabled) == "boolean" then
-        SettingsData.enableDebugPrinting = WITSavedData.debugModeEnabled
-    end
-
-    if SettingsData.enableDebugLogging == nil and type(WITSavedData.debugCaptureDeaths) == "boolean" then
-        SettingsData.enableDebugLogging = WITSavedData.debugCaptureDeaths
-    end
-
-    if IsTableEmpty(DebugData.deathLog) and type(WITSavedData.debugDeathLog) == "table" then
-        DebugData.deathLog = WITSavedData.debugDeathLog
     end
 end
 
@@ -290,8 +246,6 @@ addon.utils = {
 
     -- Create or initialize saved variables database with default values
     InitializeSavedData = function()
-        EnsureSavedVariableTables()
-        MigrateLegacySavedData()
         EnsureSavedVariableTables()
         EnsureDefaultSettings()
 

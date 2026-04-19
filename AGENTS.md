@@ -23,13 +23,11 @@
   - The script loads developer-specific paths from `.env.sync-addons`
   - The template file `.env.sync-addons.example` shows the required variables
   - The script syncs each top-level addon folder that contains a `.toc` file, including all nested files and subfolders inside it
-- Remind the user to replace the updated AddOn in their WoW folder only after making changes to addon files (below the Summary)
-  - Only include this reminder when changing addon files, inside `addons/` folder
-  - "Please update your {AddOn Name} with the newest version and {run "/reload"}/{restart the game}
-    for this changes to take effect in-game."
-    - the "run "/reload"" or "restart the game" text will depends what changes were done and whether
-      /reload is enough, or if full restart is needed (added/removed Lua files, changed to TOC file, ...)
-    - if `.toc` file was changed, always use **restart the game** (do not use `/reload`)
+- After syncing changed addon files, tell the user what was updated and whether `/reload` or a full restart is needed
+  - If sync succeeds: "I updated {AddOn Name} for you. Please {run "/reload"}/{restart the game} for these changes to take effect in-game."
+  - If sync fails or is unavailable: explain that the sync did not complete and tell the user to update the AddOn manually
+  - Use **restart the game** when a `.toc` file changed or Lua files were added/removed
+  - Use **run "/reload"** only for changes where a UI reload is enough
   - Whole message bold
 
 ### Interpretation Rules
@@ -58,6 +56,7 @@
 - Prefer **existing patterns** from FrameXML over inventing new solutions
 - Reuse Blizzard-style structures (frames, events, handlers)
 - Avoid unnecessary abstractions
+- Split large addon main files into folders/modules when adding a substantial subsystem, but avoid tiny one-off files
 - Keep code simple and compatible with Lua used in 3.3.5a
 - Add simple yet descriptive one line comments to the code
 

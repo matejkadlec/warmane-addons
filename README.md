@@ -44,6 +44,8 @@ A big thanks goes to the owner of [`3.3.5-interface-files`](https://github.com/w
 
 ### WarmaneTrackingAid
 
+> ℹ️ This AddOn is active only if logged in as a Hunter.
+
 🎯 Automatically switches Hunter tracking based on target type.
 
 - Smart tracking switching for Hunters
@@ -65,12 +67,13 @@ A big thanks goes to the owner of [`3.3.5-interface-files`](https://github.com/w
 
 ### WarmaneWGReminder
 
-⏰ Reminds players about upcoming Wintergrasp battle.
+> ℹ️ This AddOn is active only if logged in as a level 80.
+
+⏰ Reminds you about upcoming Wintergrasp battle.
 
 - Uses the in-game `GetWintergraspWaitTime()` API for accurate battle timing
 - Shows notifications at 30, 15, and 5 minutes before battle
 - Also shows notification right after the battle begins and ends
-- Addon logic is active only on level 80 characters
 - Slash command `/wwr when` to check time until next battle
 - Type `/wwr` or `/wwr help` for a list of available commands
 
@@ -144,7 +147,7 @@ This project is being under active develompent as of April 2026.
   - Comment your code
   - Update this file so the description and screenshot correspond to the latest AddOn version
 - Additional rules for for **completely new** AddOns for this repository:
-  1. Follow the naming format `Warmane[Addon][Name]` for consistency
+  1. Follow the naming format `Warmane[AddOn][Name]` for consistency
   2. Each AddOn must be fully standalone with no cross-AddOn dependencies
   3. Required `.toc` file attributes:
      ```ini
