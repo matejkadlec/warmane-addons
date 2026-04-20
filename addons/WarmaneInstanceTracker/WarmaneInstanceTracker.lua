@@ -130,6 +130,7 @@ slashCommands.Register({
 WIT:RegisterEvent("ADDON_LOADED")
 WIT:RegisterEvent("ZONE_CHANGED_NEW_AREA")
 WIT:RegisterEvent("PLAYER_ENTERING_WORLD")
+WIT:RegisterEvent("PLAYER_LOGOUT")
 WIT:RegisterEvent("PLAYER_XP_UPDATE")
 WIT:RegisterEvent("PLAYER_LEVEL_UP")
 WIT:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")

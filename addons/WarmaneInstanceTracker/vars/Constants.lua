@@ -5,6 +5,7 @@ addon.vars = addon.vars or {}
 -- Shared constants used across tracker modules
 addon.vars.KILL_XP_MATCH_WINDOW = 3
 addon.vars.COMPLETION_XP_SETTLE_DELAY = 1
+addon.vars.ACTIVE_RUN_RESTORE_WINDOW = 1800
 addon.vars.TABLE_ROWS_DISPLAYED = 12
 addon.vars.TABLE_ROW_HEIGHT = 20
 addon.vars.TABLE_COLUMN_SPACING = 8

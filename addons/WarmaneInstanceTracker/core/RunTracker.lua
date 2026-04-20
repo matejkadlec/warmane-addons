@@ -46,6 +46,7 @@ local RECENT_LFG_INSTANCE_WINDOW = 300
 local KILL_XP_MATCH_WINDOW = vars.KILL_XP_MATCH_WINDOW or 3
 local AUTO_START_DELAY = vars.AUTO_START_DELAY or 1
 local COMPLETION_XP_SETTLE_DELAY = vars.COMPLETION_XP_SETTLE_DELAY or 1
+local ACTIVE_RUN_RESTORE_WINDOW = vars.ACTIVE_RUN_RESTORE_WINDOW or 1800
 
 -- Initialize instance tracking state variables
 local state = STATE_INACTIVE
@@ -84,6 +85,10 @@ local debugLoggingEnabled = false
 local callbacks = {}
 
 local runTracker = {}
+
+local ClearPersistedActiveRun
+local PersistActiveRun
+local TryRestoreActiveRun
 
 -- Ask the bootstrap frame to enable or disable scheduled tracker updates
 local function SetAutoStartUpdateEnabled(enabled)
@@ -177,13 +182,25 @@ local function AreInstanceNamesEquivalent(leftName, rightName)
 end
 
 -- Remember the exact LFG proposal name so winged dungeons are tracked precisely
-local function SetRecentLFGInstanceName(proposedName)
-    if type(proposedName) ~= "string" or proposedName == "" then
+local function SetRecentLFGInstanceName(instanceName)
+    if type(instanceName) ~= "string" or instanceName == "" then
         return
     end
 
-    recentLFGInstanceName = proposedName
+    recentLFGInstanceName = instanceName
     recentLFGInstanceAt = GetTime()
+end
+
+-- Resolve the precise proposal dungeon name from its LFG dungeon ID
+local function ResolveLFGProposalInstanceName(proposalId, proposedName)
+    if type(proposalId) == "number" and type(GetLFGDungeonInfo) == "function" then
+        local success, dungeonName = pcall(GetLFGDungeonInfo, proposalId)
+        if success and type(dungeonName) == "string" and dungeonName ~= "" then
+            return dungeonName
+        end
+    end
+
+    return proposedName
 end
 
 -- Clear stale LFG proposal context after it has served the current run
@@ -268,6 +285,13 @@ local function ResolveCurrentPartyInstanceName()
     return resolvedInstanceName, true, true
 end
 
+-- Clear the saved active run snapshot once it is no longer resumable
+ClearPersistedActiveRun = function()
+    if type(utils.ClearActiveRun) == "function" then
+        utils.ClearActiveRun()
+    end
+end
+
 -- Capture current XP baseline for incremental XP tracking
 local function CaptureXPCheckpoint()
     levelCheckpoint = safe.UnitLevel("player") or 1
@@ -296,6 +320,7 @@ local function ResetInstanceTrackingState()
     runHadGroup = false
     ClearRecentLFGInstanceName()
     ClearPendingCompletion()
+    ClearPersistedActiveRun()
 end
 
 -- Clear ignored-in-progress state after leaving that dungeon/group
@@ -380,6 +405,7 @@ local function StartInstanceTracking(resolvedInstanceName, source, startedAt)
     isInsideTrackedInstance = true
     runHadGroup = HasActiveInstanceGroup()
     CaptureXPCheckpoint()
+    PersistActiveRun(false)
 
     if source == "manual" then
         print(InstanceActionMessage("Started a fresh tracking of ", instanceName, "."))
@@ -407,6 +433,7 @@ local function MarkIgnoredInProgress(resolvedInstanceName)
     state = STATE_IGNORED_IN_PROGRESS
     ignoredInstanceName = resolvedInstanceName
     pendingInProgressName = nil
+    ClearPersistedActiveRun()
 
     if not ignoredMessagePrinted then
         print(common.Message("WIT", "You joined an instance in progress. This run will not count towards statistics."))
@@ -472,6 +499,104 @@ local function UpdateTrackedXP()
     CaptureXPCheckpoint()
 
     return xpGained, currentLevel, isMaxLevel, reachedMaxLevel
+end
+
+-- Persist active run state so /reload can resume duration and XP counters
+PersistActiveRun = function(updateXP)
+    if not HasTrackedRun() then
+        ClearPersistedActiveRun()
+        return
+    end
+
+    if updateXP ~= false then
+        UpdateTrackedXP()
+    end
+
+    local currentCharacter = UnitName("player")
+    if type(currentCharacter) ~= "string" or currentCharacter == "" then
+        return
+    end
+
+    if type(utils.SaveActiveRun) == "function" then
+        utils.SaveActiveRun({
+            character = currentCharacter,
+            instanceName = instanceName,
+            state = state,
+            startTime = startTime,
+            pausedDuration = pausedDuration,
+            pauseStartedAt = pauseStartedAt,
+            xpGained = xpGained,
+            initialLevel = initialLevel,
+            xpCheckpoint = xpCheckpoint,
+            xpCheckpointMax = xpCheckpointMax,
+            levelCheckpoint = levelCheckpoint,
+            mobsKilled = mobsKilled,
+            runHadGroup = runHadGroup,
+            savedAt = time()
+        })
+    end
+end
+
+-- Restore an active run snapshot when a /reload returns to the same instance
+TryRestoreActiveRun = function()
+    if HasTrackedRun() or not instanceTrackingEnabled or type(utils.GetActiveRun) ~= "function" then
+        return false
+    end
+
+    local snapshot = utils.GetActiveRun()
+    if type(snapshot) ~= "table" then
+        return false
+    end
+
+    local currentCharacter = UnitName("player")
+    if type(currentCharacter) ~= "string" or currentCharacter == "" or snapshot.character ~= currentCharacter then
+        ClearPersistedActiveRun()
+        return false
+    end
+
+    if type(snapshot.savedAt) ~= "number" or (time() - snapshot.savedAt) > ACTIVE_RUN_RESTORE_WINDOW then
+        ClearPersistedActiveRun()
+        return false
+    end
+
+    if type(snapshot.instanceName) ~= "string" or snapshot.instanceName == "" then
+        ClearPersistedActiveRun()
+        return false
+    end
+
+    local resolvedInstanceName, isPartyInstance, hasValidStatus = ResolveCurrentPartyInstanceName()
+    if not hasValidStatus then
+        return false
+    end
+
+    if not isPartyInstance or not AreInstanceNamesEquivalent(snapshot.instanceName, resolvedInstanceName) then
+        ClearPersistedActiveRun()
+        return false
+    end
+
+    ClearPendingStart()
+    ClearPendingCompletion()
+    state = snapshot.state == STATE_PAUSED and STATE_PAUSED or STATE_ACTIVE
+    instanceName = snapshot.instanceName
+    startTime = type(snapshot.startTime) == "number" and snapshot.startTime > 0 and snapshot.startTime or time()
+    pausedDuration = type(snapshot.pausedDuration) == "number" and snapshot.pausedDuration >= 0 and snapshot.pausedDuration or 0
+    pauseStartedAt = type(snapshot.pauseStartedAt) == "number" and snapshot.pauseStartedAt > 0 and snapshot.pauseStartedAt or 0
+    xpGained = type(snapshot.xpGained) == "number" and snapshot.xpGained >= 0 and snapshot.xpGained or 0
+    initialLevel = type(snapshot.initialLevel) == "number" and snapshot.initialLevel > 0 and snapshot.initialLevel or safe.UnitLevel("player") or 1
+    xpCheckpoint = type(snapshot.xpCheckpoint) == "number" and snapshot.xpCheckpoint >= 0 and snapshot.xpCheckpoint or safe.UnitXP("player") or 0
+    xpCheckpointMax = type(snapshot.xpCheckpointMax) == "number" and snapshot.xpCheckpointMax > 0 and snapshot.xpCheckpointMax or safe.UnitXPMax("player") or 1
+    levelCheckpoint = type(snapshot.levelCheckpoint) == "number" and snapshot.levelCheckpoint > 0 and snapshot.levelCheckpoint or safe.UnitLevel("player") or 1
+    mobsKilled = type(snapshot.mobsKilled) == "number" and snapshot.mobsKilled >= 0 and snapshot.mobsKilled or 0
+    isCorpseRunning = false
+    isInsideTrackedInstance = true
+    pendingKillCount = 0
+    lastKillEventAt = 0
+    runHadGroup = snapshot.runHadGroup == true or HasActiveInstanceGroup()
+    ClearRecentLFGInstanceName()
+
+    PersistActiveRun(false)
+    print(InstanceActionMessage("Resumed tracking of ", instanceName, " after reload."))
+    return true
 end
 
 -- Return current XP remaining only when the XP bar data is ready and useful
@@ -874,6 +999,7 @@ local function RefreshInstanceTrackingContext(eventSource)
                 runHadGroup = true
             end
             CaptureXPCheckpoint()
+            PersistActiveRun(false)
             return
         end
 
@@ -898,10 +1024,11 @@ local function CaptureLFGProposalProgress()
         return
     end
 
-    SetRecentLFGInstanceName(proposedName)
+    local proposalInstanceName = ResolveLFGProposalInstanceName(proposalId, proposedName)
+    SetRecentLFGInstanceName(proposalInstanceName)
 
     if type(completedEncounters) == "number" and completedEncounters > 0 then
-        pendingInProgressName = proposedName
+        pendingInProgressName = proposalInstanceName
         DebugMessage("proposal-in-progress", string_format("%d/%s", completedEncounters, tostring(totalEncounters)))
 
         local resolvedInstanceName, isPartyInstance = ResolveCurrentPartyInstanceName()
@@ -976,6 +1103,7 @@ end
 local function HandleGroupChanged()
     if HasTrackedRun() and HasActiveInstanceGroup() then
         runHadGroup = true
+        PersistActiveRun(false)
         return
     end
 
@@ -1034,6 +1162,7 @@ local function HandleCombatLogEvent(...)
     if isFinalBossMatch then
         DebugMessage("completion-trigger", "matched final boss")
         instanceName = matchedBossInstance
+        PersistActiveRun(true)
         ScheduleInstanceCompletion(true, true)
     end
 end
@@ -1057,6 +1186,8 @@ local function HandleXPUpdate()
             lastKillEventAt = 0
         end
     end
+
+    PersistActiveRun(false)
 end
 
 -- Load current settings from split SavedVariables
@@ -1300,6 +1431,7 @@ function runTracker.PauseManual()
     pauseStartedAt = time()
     pendingKillCount = 0
     lastKillEventAt = 0
+    PersistActiveRun(false)
     print(InstanceActionMessage("Paused tracking of ", instanceName, "."))
 end
 
@@ -1316,6 +1448,7 @@ function runTracker.ContinueManual()
     pauseStartedAt = 0
     state = STATE_ACTIVE
     CaptureXPCheckpoint()
+    PersistActiveRun(false)
     print(InstanceActionMessage("Continued tracking of ", instanceName, "."))
 end
 
@@ -1364,9 +1497,15 @@ function runTracker.HandleEvent(event, ...)
         if HasTrackedRun() then
             isCorpseRunning = false
             CaptureXPCheckpoint()
+            PersistActiveRun(false)
         end
     elseif event == "ZONE_CHANGED_NEW_AREA" or event == "PLAYER_ENTERING_WORLD" then
+        if event == "PLAYER_ENTERING_WORLD" then
+            TryRestoreActiveRun()
+        end
         RefreshInstanceTrackingContext(event)
+    elseif event == "PLAYER_LOGOUT" then
+        PersistActiveRun(true)
     elseif event == "PARTY_MEMBERS_CHANGED" then
         HandleGroupChanged()
     elseif event == "UNIT_AURA" then

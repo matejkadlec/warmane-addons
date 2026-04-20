@@ -46,6 +46,9 @@ local function EnsureSavedVariableTables()
     if type(InstancesData.instanceStats) ~= "table" then
         InstancesData.instanceStats = {}
     end
+    if type(InstancesData.activeRun) ~= "table" then
+        InstancesData.activeRun = nil
+    end
 
     if type(DebugData.deathLog) ~= "table" then
         DebugData.deathLog = {}
@@ -286,6 +289,33 @@ addon.utils = {
 
         tinsert(InstancesData.instances, instanceData)
         return UpsertInstanceStats(instanceData.character, instanceData.name, instanceData.duration, runXP) ~= nil
+    end,
+
+    -- Persist the currently active run so /reload can resume it
+    SaveActiveRun = function(activeRun)
+        if type(InstancesData) ~= "table" then
+            InstancesData = {}
+        end
+        if type(activeRun) ~= "table" then
+            InstancesData.activeRun = nil
+            return
+        end
+
+        InstancesData.activeRun = activeRun
+    end,
+
+    GetActiveRun = function()
+        if type(InstancesData) ~= "table" or type(InstancesData.activeRun) ~= "table" then
+            return nil
+        end
+
+        return InstancesData.activeRun
+    end,
+
+    ClearActiveRun = function()
+        if type(InstancesData) == "table" then
+            InstancesData.activeRun = nil
+        end
     end,
 
     -- Fetch aggregate stats rows for table UI rendering
