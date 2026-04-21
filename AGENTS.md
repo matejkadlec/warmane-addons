@@ -80,6 +80,7 @@
 | WarmaneTrackingAid     | WTA       |
 | WarmaneWGReminder      | WWR       |
 | WarmaneChatCopy        | WCC       |
+| WarmaneHealerProtection | WHP       |
 
 ---
 

@@ -16,6 +16,7 @@ A big thanks goes to the owner of [`3.3.5-interface-files`](https://github.com/w
   - [WarmaneTrackingAid](#warmanetrackingaid)
   - [WarmaneChatCopy](#warmanechatcopy)
   - [WarmaneWGReminder](#warmanewgreminder)
+  - [WarmaneHealerProtection](#warmanehealerprotection)
   - [WarmaneNotAway](#warmanenotaway)
 - [Screenshots](#-screenshots)
 - [Installation](#️-installation)
@@ -76,6 +77,16 @@ A big thanks goes to the owner of [`3.3.5-interface-files`](https://github.com/w
 - Also shows notification right after the battle begins and ends
 - Slash command `/wwr when` to check time until next battle
 - Type `/wwr` or `/wwr help` for a list of available commands
+
+### WarmaneHealerProtection
+
+💬 Warns your dungeon group when you have aggro as the assigned healer.
+
+- Active only in 5-player dungeon instances
+- Uses the assigned healer role from Blizzard's dungeon role API
+- Sends `Healer Protection: I have aggro!` to group chat with a configurable 15-second default cooldown
+- Slash command `/whp` shows help and `/whp delay <seconds>` changes the saved warning delay between 5 and 120 seconds
+- Checks visible hostile targets and recent combat-log hits to detect mobs attacking you
 
 ### WarmaneNotAway
 

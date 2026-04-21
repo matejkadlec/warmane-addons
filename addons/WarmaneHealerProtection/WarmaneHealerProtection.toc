@@ -1,0 +1,8 @@
+## Interface: 30300
+## Title: |cFFFF8000Warmane|r Healer Protection
+## Notes: Warns your dungeon party when you have aggro as healer.
+## Author: Matej Kadlec (https://github.com/matejkadlec)
+## Version: 1.0
+## SavedVariables: HealerProtectionSettings
+
+WarmaneHealerProtection.lua
