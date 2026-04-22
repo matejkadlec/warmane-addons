@@ -1,0 +1,8 @@
+## Interface: 30300
+## Title: |cFFFF8000Warmane|r Healer Mana
+## Notes: Warns your dungeon party when you are low on mana as healer.
+## Author: Matej Kadlec (https://github.com/matejkadlec)
+## Version: 1.0
+## SavedVariables: HealerManaSettings
+
+WarmaneHealerMana.lua
