@@ -5,6 +5,7 @@ local originalSetItemRef
 -- Cache frequently used functions
 local gsub = gsub
 local strfind = strfind
+local strmatch = strmatch
 local strsub = strsub
 
 -- Import color codes
@@ -64,8 +65,22 @@ function HandleMessage(frame, msg, r, g, b, id, ...)
         return
     end
 
-    local newMsg = "|Hcopy"..ProcessMessage(msg).."|h" .. msg .. "|h"
-    frame:originalMessage(newMsg, r, g, b, id, ...)
+    frame:originalMessage(BuildCopyMessage(msg), r, g, b, id, ...)
+end
+
+-- Only the channel prefix should trigger copying so player links keep Blizzard behavior.
+function BuildCopyMessage(message)
+    if type(message) ~= "string" or not strfind(message, "|Hchannel:", 1, true) then
+        return message
+    end
+
+    local channelStart, _, displayText, channelEnd = strmatch(message, "()(|Hchannel:[^|]+|h(.-)|h)()")
+    if not channelStart then
+        return message
+    end
+
+    local copyLink = "|Hcopy"..ProcessMessage(message).."|h"..displayText.."|h"
+    return strsub(message, 1, channelStart - 1) .. copyLink .. strsub(message, channelEnd)
 end
 
 function ProcessMessage(message)
