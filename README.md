@@ -12,18 +12,23 @@ A big thanks goes to the owner of [`3.3.5-interface-files`](https://github.com/w
 ## 📋 Table of Contents
 
 - [Available AddOns](#-available-addons)
-  - [WarmaneInstanceTracker](#warmaneinstancetracker)
-  - [WarmaneWGReminder](#warmanewgreminder)
-  - [WarmaneChatCopy](#warmanechatcopy)
-  - [WarmaneTrackingAid](#warmanetrackingaid)
-  - [WarmaneHealerMana](#warmanehealermana)
-  - [WarmaneHealerProtection](#warmanehealerprotection)
-  - [WarmaneNotAway](#warmanenotaway)
+    - [WarmaneInstanceTracker](#warmaneinstancetracker)
+    - [WarmaneWGReminder](#warmanewgreminder)
+    - [WarmaneChatCopy](#warmanechatcopy)
+    - [WarmaneTrackingAid](#warmanetrackingaid)
+    - [WarmaneHealerMana](#warmanehealermana)
+    - [WarmaneHealerProtection](#warmanehealerprotection)
+    - [WarmaneNotAway](#warmanenotaway)
 - [Screenshots](#-screenshots)
+    - [WarmaneInstanceTracker](#warmaneinstancetracker-1)
+    - [WarmaneWGReminder](#warmanewgreminder-1)
+    - [WarmaneChatCopy](#warmanechatcopy-1)
+    - [WarmaneTrackingAid](#warmanetrackingaid-1)
+    - [WarmaneNotAway](#warmanenotaway-1)
 - [Installation](#️-installation)
 - [Feedback](#-feedback)
 - [Contributing](#-contributing)
-  - [Development Sync](#️-development-sync)
+    - [Development Sync](#️-development-sync)
 
 ## 📦 Available AddOns
 
