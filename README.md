@@ -12,10 +12,11 @@ A big thanks goes to the owner of [`3.3.5-interface-files`](https://github.com/w
 ## 📋 Table of Contents
 
 - [Available AddOns](#-available-addons)
-  - [WarmaneInstanceTracker](#warmaneinstancetracker-wip)
-  - [WarmaneTrackingAid](#warmanetrackingaid)
-  - [WarmaneChatCopy](#warmanechatcopy)
+  - [WarmaneInstanceTracker](#warmaneinstancetracker)
   - [WarmaneWGReminder](#warmanewgreminder)
+  - [WarmaneChatCopy](#warmanechatcopy)
+  - [WarmaneTrackingAid](#warmanetrackingaid)
+  - [WarmaneHealerMana](#warmanehealermana)
   - [WarmaneHealerProtection](#warmanehealerprotection)
   - [WarmaneNotAway](#warmanenotaway)
 - [Screenshots](#-screenshots)
@@ -30,8 +31,36 @@ A big thanks goes to the owner of [`3.3.5-interface-files`](https://github.com/w
 
 📋 Tracks completed dungeon runs and stores both run history and aggregated per-character/per-instance stats.
 
-- Main table UI (`/wit`) shows: `Character | Instance | Total Runs | Average XP | Average Time | Fastest Time`.
-- Instance names in the table include level ranges (i.e. `Wailing Caverns (15-25)`)
+- Main table UI (`/wit`) now shows:
+  - `Character`
+  - `Instance`
+  - `Total Runs`
+  - `Average XP`
+  - `Average Time`
+  - `Fastest Time`
+  - `XP Per Minute`
+- Character rows include the latest known level in the table, for example `Baladie (42)`
+  - When a run is saved on that character, all of that character's saved rows are updated to the newest known level
+  - Existing old rows can be backfilled with `/wit update` while logged into that character
+- Instance names in the table include level ranges where available, for example `Wailing Caverns (15 - 25)`
+- Max-level and other no-XP runs are handled safely:
+  - Such runs still increase run counts and time statistics
+  - XP-based columns show `-` when no XP-bearing runs exist for that character+instance row
+  - XP averages are calculated only from XP-bearing runs, so level 80 clears do not drag XP averages down to zero
+- Table quality-of-life features:
+  - Live text search filters rows as you type
+  - Character dropdown filter supports `All` plus multi-select toggles with instant checkmark updates
+  - Clicking a column header sorts ascending/descending by that column
+  - Column widths are configurable in `addons/WarmaneInstanceTracker/vars/Constants.lua`
+- Table actions:
+  - `Settings` opens the configuration window
+  - `Export` opens an in-game CSV export dialog with copyable text
+  - Export is intentionally in-client only: WoW 3.3.5a addons cannot write files to arbitrary paths like `C:\wit-export`
+- Slash commands:
+  - `/wit` opens or closes the stats table
+  - `/wit config` opens or closes the settings window
+  - `/wit update` updates saved table rows with the current logged-in character's level
+    - This does **not** update offline alts; WoW only exposes the current character's live level
 - Settings window (`/wit config`) includes persistent checkboxes:
   - User settings: instance tracking, party completion message
   - Developer settings: debug printing, debug logging
@@ -42,17 +71,19 @@ A big thanks goes to the owner of [`3.3.5-interface-files`](https://github.com/w
   - `InstancesData` (runs + aggregated stats)
   - `SettingsData` (user/developer toggles)
   - `DebugData` (debug death log)
+  - Aggregated stats use a dedicated schema migration path so historical runs can be rebuilt after stat structure updates
 
-### WarmaneTrackingAid
+### WarmaneWGReminder
 
-> ℹ️ This AddOn is active only if logged in as a Hunter.
+⏰ Reminds you about upcoming Wintergrasp battle.
 
-🎯 Automatically switches Hunter tracking based on target type.
+- Uses the in-game `GetWintergraspWaitTime()` API for accurate battle timing
+- Shows notifications at 30, 15, and 5 minutes before battle
+- Also shows notification right after the battle begins and ends
+- Slash command `/wwr when` to check time until next battle
+- Type `/wwr` or `/wwr help` for a list of available commands
 
-- Smart tracking switching for Hunters
-- Triggers only for neutral/hostile targets
-- GCD-aware to prevent false switching
-- Implemented to work with manual tracking switching as well
+> ℹ️ This AddOn is only activates if logged in as a level 80.
 
 ### WarmaneChatCopy
 
@@ -66,17 +97,20 @@ A big thanks goes to the owner of [`3.3.5-interface-files`](https://github.com/w
 - Copying more messages makes them appear under eachother in the click order
 - Clear button to reset the copy window content
 
-### WarmaneWGReminder
+### WarmaneTrackingAid
 
-> ℹ️ This AddOn is active only if logged in as a level 80.
+🎯 Automatically switches Hunter tracking based on target type.
 
-⏰ Reminds you about upcoming Wintergrasp battle.
+- Smart tracking switching for Hunters
+- Triggers only for neutral/hostile targets
+- GCD-aware to prevent false switching
+- Implemented to work with manual tracking switching as well
 
-- Uses the in-game `GetWintergraspWaitTime()` API for accurate battle timing
-- Shows notifications at 30, 15, and 5 minutes before battle
-- Also shows notification right after the battle begins and ends
-- Slash command `/wwr when` to check time until next battle
-- Type `/wwr` or `/wwr help` for a list of available commands
+> ℹ️ This AddOn only activates if logged in as a Hunter.
+
+### WarmaneHealerMana
+
+for AI: create this section, should be similar to WarmaneHealerProtection below.
 
 ### WarmaneHealerProtection
 
@@ -103,13 +137,13 @@ A big thanks goes to the owner of [`3.3.5-interface-files`](https://github.com/w
 
 ![Instance Tracker Demo](screenshots/instance-tracker-demo.png)
 
-_A clean in-game table tracking your dungeon runs with relevant data, turning every run into visible progress._
+_A filterable, sortable in-game table tracking your dungeon runs with leveling context, XP/time averages, and copyable CSV export._
 
-### WarmaneTrackingAid
+### WarmaneWGReminder
 
-![Tracking Aid Demo](screenshots/tracking-aid-demo.png)
+![WG Reminder Demo](screenshots/wg-reminder-demo.png)
 
-_Reactive tracking system adapting to enemy types in PvP combat._
+_Timely reminder for Wintergrasp battles to ensure you never miss one again._
 
 ### WarmaneChatCopy
 
@@ -117,11 +151,11 @@ _Reactive tracking system adapting to enemy types in PvP combat._
 
 _Separate window to copy any message from the chat, created by clicking on the channel name or into the message directly._
 
-### WarmaneWGReminder
+### WarmaneTrackingAid
 
-![WG Reminder Demo](screenshots/wg-reminder-demo.png)
+![Tracking Aid Demo](screenshots/tracking-aid-demo.png)
 
-_Timely reminder for Wintergrasp battles to ensure you never miss one again._
+_Reactive tracking system adapting to enemy types in PvP combat._
 
 ### WarmaneNotAway
 

@@ -47,6 +47,7 @@ local KILL_XP_MATCH_WINDOW = vars.KILL_XP_MATCH_WINDOW or 3
 local AUTO_START_DELAY = vars.AUTO_START_DELAY or 1
 local COMPLETION_XP_SETTLE_DELAY = vars.COMPLETION_XP_SETTLE_DELAY or 1
 local ACTIVE_RUN_RESTORE_WINDOW = vars.ACTIVE_RUN_RESTORE_WINDOW or 1800
+local MAX_PLAYER_LEVEL_FALLBACK = 80
 
 -- Initialize instance tracking state variables
 local state = STATE_INACTIVE
@@ -105,6 +106,30 @@ end
 -- Return whether a final-boss completion is waiting for XP events to settle
 local function HasPendingCompletion()
     return pendingCompletionAt > 0
+end
+
+-- Use the 3.3.5 max-level global when it exists, with Warmane's cap as fallback
+local function GetMaxPlayerLevel()
+    if type(MAX_PLAYER_LEVEL) == "number" and MAX_PLAYER_LEVEL > 0 then
+        return MAX_PLAYER_LEVEL
+    end
+
+    return MAX_PLAYER_LEVEL_FALLBACK
+end
+
+-- Mark only true XP-bearing runs for XP averages at max level or locked XP
+local function IsCurrentRunXPEligible(currentLevel, runXP)
+    local effectiveXP = type(runXP) == "number" and runXP or xpGained
+
+    if effectiveXP > 0 then
+        return true
+    end
+
+    if type(safe.IsXPUserDisabled) == "function" and safe.IsXPUserDisabled() then
+        return false
+    end
+
+    return type(currentLevel) == "number" and currentLevel < GetMaxPlayerLevel()
 end
 
 -- Keep the single OnUpdate script active while any scheduled work is pending
@@ -463,8 +488,9 @@ end
 -- Recalculate tracked XP using incremental checkpoints so paused XP is ignored
 local function UpdateTrackedXP()
     local currentLevel = safe.UnitLevel("player") or levelCheckpoint or 1
-    local isMaxLevel = currentLevel == MAX_PLAYER_LEVEL
-    local reachedMaxLevel = isMaxLevel and initialLevel == MAX_PLAYER_LEVEL - 1
+    local maxPlayerLevel = GetMaxPlayerLevel()
+    local isMaxLevel = currentLevel == maxPlayerLevel
+    local reachedMaxLevel = isMaxLevel and initialLevel == maxPlayerLevel - 1
 
     if not HasTrackedRun() then
         xpGained = 0
@@ -475,7 +501,7 @@ local function UpdateTrackedXP()
         return xpGained, currentLevel, isMaxLevel, reachedMaxLevel
     end
 
-    if levelCheckpoint == MAX_PLAYER_LEVEL then
+    if levelCheckpoint == maxPlayerLevel then
         return xpGained, currentLevel, isMaxLevel, reachedMaxLevel
     end
 
@@ -792,8 +818,10 @@ local function ProcessInstanceCompletion(saveRun, sendPartySummary)
     end
 
     local currentLevel = safe.UnitLevel("player") or initialLevel
-    local isMaxLevel = currentLevel == MAX_PLAYER_LEVEL
-    local reachedMaxLevel = isMaxLevel and initialLevel == MAX_PLAYER_LEVEL - 1
+    local maxPlayerLevel = GetMaxPlayerLevel()
+    local isMaxLevel = currentLevel == maxPlayerLevel
+    local reachedMaxLevel = isMaxLevel and initialLevel == maxPlayerLevel - 1
+    local xpEligible = IsCurrentRunXPEligible(currentLevel, xpGained)
 
     if saveRun then
         local instanceData = {
@@ -802,6 +830,8 @@ local function ProcessInstanceCompletion(saveRun, sendPartySummary)
             xpGained = xpGained,
             timestamp = time(),
             character = currentCharacter,
+            level = currentLevel,
+            xpEligible = xpEligible,
         }
 
         local saved = utils.SaveInstanceRun(instanceData)
@@ -1325,13 +1355,17 @@ function runTracker.SaveDebugSimulatedRun(instanceNameArg, durationArg, xpArg)
         xpArg = 0
     end
 
+    local currentLevel = safe.UnitLevel("player")
+    local simulatedXP = math_floor(xpArg)
+
     local instanceData = {
         name = instanceNameArg,
         duration = math_floor(durationArg),
-        xpGained = math_floor(xpArg),
+        xpGained = simulatedXP,
         timestamp = time(),
         character = character,
-        level = safe.UnitLevel("player")
+        level = currentLevel,
+        xpEligible = IsCurrentRunXPEligible(currentLevel, simulatedXP)
     }
 
     local saved = utils.SaveInstanceRun(instanceData)
@@ -1361,6 +1395,26 @@ function runTracker.PrintStatus()
         COLOR.ORANGE, displayState, COLOR.YELLOW,
         COLOR.ORANGE, instanceName, COLOR.YELLOW,
         COLOR.ORANGE, FormatTableTime(GetElapsedSeconds()), COLOR.YELLOW))
+end
+
+-- Update saved table rows for the currently logged-in character
+function runTracker.UpdateCurrentCharacterLevel()
+    local character = UnitName("player")
+    if not character or character == "" then
+        print(common.ErrorMessage("WIT", "retrieve current character name"))
+        return
+    end
+
+    local currentLevel = safe.UnitLevel("player")
+    local updatedRows = utils.UpdateCharacterLevel(character, currentLevel)
+    if updatedRows > 0 then
+        print(common.Message("WIT", "Updated character level", string_format("%s (%d)", character, currentLevel), true))
+        print(common.Message("WIT", "Updated rows", tostring(updatedRows), true))
+        RefreshStatsTableIfOpen()
+        return
+    end
+
+    print(common.Message("WIT", "No saved rows found for", character, true))
 end
 
 -- Start tracking manually from the current party instance

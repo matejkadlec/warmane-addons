@@ -2,6 +2,7 @@ local addonName, addon = ...
 
 -- Cache frequently used functions
 local type = type
+local tonumber = tonumber
 local ipairs = ipairs
 local pairs = pairs
 local tinsert = tinsert
@@ -12,7 +13,8 @@ local string_sub = string.sub
 local string_gsub = string.gsub
 
 -- Track schema version for saved aggregate stats
-local STATS_SCHEMA_VERSION = 1
+local STATS_SCHEMA_VERSION = 2
+local MAX_PLAYER_LEVEL_FALLBACK = 80
 local DEBUG_LOG_MAX_ENTRIES = 5000
 
 -- Default configurable addon settings
@@ -46,6 +48,9 @@ local function EnsureSavedVariableTables()
     if type(InstancesData.instanceStats) ~= "table" then
         InstancesData.instanceStats = {}
     end
+    if type(InstancesData.characterLevels) ~= "table" then
+        InstancesData.characterLevels = {}
+    end
     if type(InstancesData.activeRun) ~= "table" then
         InstancesData.activeRun = nil
     end
@@ -67,6 +72,25 @@ end
 -- Build a unique key for one character + one instance
 local function BuildStatsKey(character, instanceName)
     return character .. "||" .. instanceName
+end
+
+-- Use the WotLK max-level global when available, with Warmane's cap as fallback
+local function GetMaxPlayerLevel()
+    if type(MAX_PLAYER_LEVEL) == "number" and MAX_PLAYER_LEVEL > 0 then
+        return MAX_PLAYER_LEVEL
+    end
+
+    return MAX_PLAYER_LEVEL_FALLBACK
+end
+
+-- Normalize levels from live and historical run records
+local function NormalizeLevel(level)
+    local numericLevel = tonumber(level)
+    if type(numericLevel) ~= "number" or numericLevel <= 0 then
+        return nil
+    end
+
+    return math_floor(numericLevel)
 end
 
 -- Normalize GUID format so parsing works with and without "0x" prefix
@@ -96,6 +120,56 @@ local function EnsureInstanceStatsTable()
     if type(InstancesData.instanceStats) ~= "table" then
         InstancesData.instanceStats = {}
     end
+    if type(InstancesData.characterLevels) ~= "table" then
+        InstancesData.characterLevels = {}
+    end
+end
+
+-- Keep one latest known level per character and mirror it into all rows
+local function UpdateCharacterLevel(character, level)
+    if not IsValidText(character) then
+        return nil
+    end
+
+    local normalizedLevel = NormalizeLevel(level)
+    if not normalizedLevel then
+        return InstancesData.characterLevels and InstancesData.characterLevels[character] or nil
+    end
+
+    EnsureInstanceStatsTable()
+
+    local previousLevel = NormalizeLevel(InstancesData.characterLevels[character])
+    if previousLevel and previousLevel > normalizedLevel then
+        normalizedLevel = previousLevel
+    end
+
+    InstancesData.characterLevels[character] = normalizedLevel
+
+    for _, record in pairs(InstancesData.instanceStats) do
+        if type(record) == "table" and record.character == character then
+            record.characterLevel = normalizedLevel
+        end
+    end
+
+    return normalizedLevel
+end
+
+-- Historical records only know eligibility when the new flag exists or XP was earned
+local function ResolveRunXPEligibility(run, runXP)
+    if type(run) == "table" and type(run.xpEligible) == "boolean" then
+        return run.xpEligible
+    end
+
+    if type(runXP) == "number" and runXP > 0 then
+        return true
+    end
+
+    local runLevel = type(run) == "table" and NormalizeLevel(run.level) or nil
+    if runLevel and runLevel >= GetMaxPlayerLevel() then
+        return false
+    end
+
+    return false
 end
 
 -- Recompute average values from totals and run count
@@ -103,8 +177,20 @@ local function RecalculateAverages(record)
     if type(record) ~= "table" or type(record.totalRuns) ~= "number" or record.totalRuns <= 0 then
         return
     end
-    record.averageXP = RoundNumber(record.totalXP / record.totalRuns)
+
     record.averageTime = RoundNumber(record.totalDuration / record.totalRuns)
+
+    if type(record.xpRuns) == "number" and record.xpRuns > 0 then
+        record.averageXP = RoundNumber(record.totalXP / record.xpRuns)
+        if type(record.totalXPDuration) == "number" and record.totalXPDuration > 0 then
+            record.averageXPPerMinute = RoundNumber(record.totalXP / (record.totalXPDuration / 60))
+        else
+            record.averageXPPerMinute = 0
+        end
+    else
+        record.averageXP = nil
+        record.averageXPPerMinute = nil
+    end
 end
 
 -- Validate one aggregate stats record
@@ -114,12 +200,14 @@ local function IsValidStatsRecord(record)
         IsValidText(record.instanceName) and
         type(record.totalRuns) == "number" and record.totalRuns > 0 and
         type(record.totalXP) == "number" and record.totalXP >= 0 and
+        type(record.xpRuns) == "number" and record.xpRuns >= 0 and record.xpRuns <= record.totalRuns and
+        type(record.totalXPDuration) == "number" and record.totalXPDuration >= 0 and
         type(record.totalDuration) == "number" and record.totalDuration > 0 and
         type(record.fastestTime) == "number" and record.fastestTime > 0
 end
 
 -- Insert one run into the aggregate table
-local function UpsertInstanceStats(character, instanceName, duration, xpGained)
+local function UpsertInstanceStats(character, instanceName, duration, xpGained, xpEligible, characterLevel)
     if not IsValidText(character) or not IsValidText(instanceName) then
         return nil
     end
@@ -133,6 +221,7 @@ local function UpsertInstanceStats(character, instanceName, duration, xpGained)
     end
 
     EnsureInstanceStatsTable()
+    local knownLevel = UpdateCharacterLevel(character, characterLevel)
 
     local key = BuildStatsKey(character, instanceName)
     local record = InstancesData.instanceStats[key]
@@ -141,10 +230,12 @@ local function UpsertInstanceStats(character, instanceName, duration, xpGained)
         record = {
             character = character,
             instanceName = instanceName,
+            characterLevel = knownLevel,
             totalRuns = 0,
             totalXP = 0,
+            xpRuns = 0,
+            totalXPDuration = 0,
             totalDuration = 0,
-            averageXP = 0,
             averageTime = 0,
             fastestTime = 0
         }
@@ -153,9 +244,19 @@ local function UpsertInstanceStats(character, instanceName, duration, xpGained)
 
     record.character = character
     record.instanceName = instanceName
+    record.characterLevel = knownLevel or NormalizeLevel(record.characterLevel)
     record.totalRuns = (type(record.totalRuns) == "number" and record.totalRuns or 0) + 1
-    record.totalXP = (type(record.totalXP) == "number" and record.totalXP or 0) + safeXP
     record.totalDuration = (type(record.totalDuration) == "number" and record.totalDuration or 0) + duration
+
+    if xpEligible == true then
+        record.totalXP = (type(record.totalXP) == "number" and record.totalXP or 0) + safeXP
+        record.xpRuns = (type(record.xpRuns) == "number" and record.xpRuns or 0) + 1
+        record.totalXPDuration = (type(record.totalXPDuration) == "number" and record.totalXPDuration or 0) + duration
+    else
+        record.totalXP = type(record.totalXP) == "number" and record.totalXP or 0
+        record.xpRuns = type(record.xpRuns) == "number" and record.xpRuns or 0
+        record.totalXPDuration = type(record.totalXPDuration) == "number" and record.totalXPDuration or 0
+    end
 
     if type(record.fastestTime) ~= "number" or record.fastestTime <= 0 or duration < record.fastestTime then
         record.fastestTime = duration
@@ -168,6 +269,7 @@ end
 -- Rebuild aggregate table from historical runs once during schema migration
 local function RebuildInstanceStatsFromInstances()
     InstancesData.instanceStats = {}
+    InstancesData.characterLevels = {}
     if type(InstancesData.instances) ~= "table" then
         return
     end
@@ -181,7 +283,9 @@ local function RebuildInstanceStatsFromInstances()
             if runXP < 0 then
                 runXP = 0
             end
-            UpsertInstanceStats(run.character, run.name, run.duration, runXP)
+            local runLevel = NormalizeLevel(run.level)
+            local xpEligible = ResolveRunXPEligibility(run, runXP)
+            UpsertInstanceStats(run.character, run.name, run.duration, runXP, xpEligible, runLevel)
         end
     end
 end
@@ -194,9 +298,19 @@ local function SanitizeInstanceStats()
         if not IsValidStatsRecord(record) then
             InstancesData.instanceStats[key] = nil
         else
+            if type(record.xpRuns) ~= "number" then
+                record.xpRuns = 0
+            end
+            if type(record.totalXPDuration) ~= "number" then
+                record.totalXPDuration = 0
+            end
+            if record.xpRuns > record.totalRuns then
+                record.xpRuns = record.totalRuns
+            end
             if record.fastestTime > record.totalDuration then
                 record.fastestTime = record.totalDuration
             end
+            record.characterLevel = UpdateCharacterLevel(record.character, record.characterLevel)
             RecalculateAverages(record)
         end
     end
@@ -287,8 +401,24 @@ addon.utils = {
         end
         instanceData.xpGained = runXP
 
+        local characterLevel = NormalizeLevel(instanceData.level)
+        if characterLevel then
+            instanceData.level = characterLevel
+        end
+
+        if type(instanceData.xpEligible) ~= "boolean" then
+            instanceData.xpEligible = ResolveRunXPEligibility(instanceData, runXP)
+        end
+
         tinsert(InstancesData.instances, instanceData)
-        return UpsertInstanceStats(instanceData.character, instanceData.name, instanceData.duration, runXP) ~= nil
+        return UpsertInstanceStats(
+            instanceData.character,
+            instanceData.name,
+            instanceData.duration,
+            runXP,
+            instanceData.xpEligible,
+            characterLevel
+        ) ~= nil
     end,
 
     -- Persist the currently active run so /reload can resume it
@@ -318,6 +448,30 @@ addon.utils = {
         end
     end,
 
+    -- Update all aggregate rows for one character with a known live level
+    UpdateCharacterLevel = function(character, level)
+        if not IsValidText(character) then
+            return 0
+        end
+
+        local normalizedLevel = NormalizeLevel(level)
+        if not normalizedLevel then
+            return 0
+        end
+
+        EnsureInstanceStatsTable()
+        UpdateCharacterLevel(character, normalizedLevel)
+
+        local updatedRows = 0
+        for _, record in pairs(InstancesData.instanceStats) do
+            if type(record) == "table" and record.character == character then
+                updatedRows = updatedRows + 1
+            end
+        end
+
+        return updatedRows
+    end,
+
     -- Fetch aggregate stats rows for table UI rendering
     GetAllInstanceStatsRows = function()
         if type(InstancesData) ~= "table" or type(InstancesData.instanceStats) ~= "table" then
@@ -331,11 +485,15 @@ addon.utils = {
                 rows[#rows + 1] = {
                     character = record.character,
                     instanceName = record.instanceName,
+                    characterLevel = record.characterLevel,
                     totalRuns = record.totalRuns,
                     totalXP = record.totalXP,
+                    xpRuns = record.xpRuns,
+                    totalXPDuration = record.totalXPDuration,
                     totalDuration = record.totalDuration,
                     averageXP = record.averageXP,
                     averageTime = record.averageTime,
+                    averageXPPerMinute = record.averageXPPerMinute,
                     fastestTime = record.fastestTime
                 }
             end
@@ -368,7 +526,7 @@ addon.utils = {
         return {
             averageTime = record.averageTime,
             fastestTime = record.fastestTime,
-            averageXP = record.averageXP > 0 and record.averageXP or nil,
+            averageXP = record.xpRuns > 0 and record.averageXP and record.averageXP > 0 and record.averageXP or nil,
             totalRuns = record.totalRuns
         }
     end,

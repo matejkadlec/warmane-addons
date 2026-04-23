@@ -16,6 +16,7 @@ local slashCommands = addon.slashCommands
 -- Keep references to modular UI controllers
 local statsTableUI = nil
 local configFrameUI = nil
+local exportDialogUI = nil
 
 -- Forward declare helpers used across UI callbacks
 local ToggleConfigFrame
@@ -32,7 +33,8 @@ UpdateSpecialFrameEscOrder = function()
 
     local statsShown = statsTableUI and statsTableUI.IsShown and statsTableUI.IsShown() or false
     local configShown = configFrameUI and configFrameUI.IsShown and configFrameUI.IsShown() or false
-    uiSpecialFrames.UpdateEscOrder(statsShown, configShown)
+    local exportShown = exportDialogUI and exportDialogUI.IsShown and exportDialogUI.IsShown() or false
+    uiSpecialFrames.UpdateEscOrder(statsShown, configShown, exportShown)
 end
 
 -- Build UI controllers once and inject callbacks back into tracker logic
@@ -58,11 +60,23 @@ local function EnsureUIControllers()
         })
     end
 
+    if not exportDialogUI and type(ui.CreateExportDialog) == "function" then
+        exportDialogUI = ui.CreateExportDialog({
+            onVisibilityChanged = UpdateSpecialFrameEscOrder
+        })
+    end
+
     if not statsTableUI and type(ui.CreateStatsTable) == "function" then
         statsTableUI = ui.CreateStatsTable({
             toggleConfig = function()
                 if ToggleConfigFrame then
                     ToggleConfigFrame()
+                end
+            end,
+            onExport = function(csvText)
+                EnsureUIControllers()
+                if exportDialogUI and exportDialogUI.Show then
+                    exportDialogUI.Show(csvText)
                 end
             end,
             onVisibilityChanged = UpdateSpecialFrameEscOrder

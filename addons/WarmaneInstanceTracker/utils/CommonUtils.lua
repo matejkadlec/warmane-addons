@@ -101,6 +101,20 @@ local function SafeUnitLevel(unit)
     return level
 end
 
+-- Safely detect locked XP without assuming the function exists everywhere
+local function SafeIsXPUserDisabled()
+    if type(IsXPUserDisabled) ~= "function" then
+        return false
+    end
+
+    local success, disabled = pcall(IsXPUserDisabled)
+    if not success then
+        return false
+    end
+
+    return disabled == true
+end
+
 -- Export common utilities to addon namespace
 addon.common = {
     Message = FormatMessage,
@@ -113,4 +127,5 @@ addon.safe = {
     UnitXP = SafeUnitXP,
     UnitXPMax = SafeUnitXPMax,
     UnitLevel = SafeUnitLevel,
+    IsXPUserDisabled = SafeIsXPUserDisabled,
 }

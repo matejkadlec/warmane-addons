@@ -76,7 +76,7 @@ addon.ui.CreateConfigFrame = function(options)
 
         local title = configFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
         title:SetPoint("TOP", configFrame, "TOP", 0, -16)
-        title:SetText("Warmane Instace Tracker Settings")
+        title:SetText("Warmane Instance Tracker - Settings")
 
         local closeButton = CreateFrame("Button", nil, configFrame, "UIPanelCloseButton")
         closeButton:SetPoint("TOPRIGHT", configFrame, "TOPRIGHT", -5, -5)

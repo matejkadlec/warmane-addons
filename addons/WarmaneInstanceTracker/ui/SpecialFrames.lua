@@ -6,7 +6,8 @@ local table_insert = table.insert
 
 local frameNames = (addon.vars and addon.vars.FRAME_NAMES) or {
     stats = "WITStatsFrame",
-    config = "WITConfigFrame"
+    config = "WITConfigFrame",
+    export = "WITExportFrame"
 }
 
 local function RemoveFromSpecialFrames(frameName)
@@ -35,11 +36,17 @@ local function AddToSpecialFrames(frameName)
     table_insert(UISpecialFrames, frameName)
 end
 
--- Keep Esc behavior classic: config closes first, main second
+-- Keep Esc behavior classic: child dialogs close before the main table
 addon.uiSpecialFrames = {
-    UpdateEscOrder = function(statsShown, configShown)
+    UpdateEscOrder = function(statsShown, configShown, exportShown)
         RemoveFromSpecialFrames(frameNames.stats)
         RemoveFromSpecialFrames(frameNames.config)
+        RemoveFromSpecialFrames(frameNames.export)
+
+        if exportShown then
+            AddToSpecialFrames(frameNames.export)
+            return
+        end
 
         if configShown then
             AddToSpecialFrames(frameNames.config)

@@ -20,6 +20,7 @@ local function PrintHelp()
     print("  |cFFFF8000/wit |cFFFFFF00- Open or close the stats table|r")
     print("  |cFFFF8000/wit config |cFFFFFF00- Open or close the settings window|r")
     print("  |cFFFF8000/wit status |cFFFFFF00- Show current tracking state|r")
+    print("  |cFFFF8000/wit update |cFFFFFF00- Update saved rows with this character's current level|r")
     print("  |cFFFF8000/wit start |cFFFFFF00- Start tracking the current instance|r")
     print("  |cFFFF8000/wit -s |cFFFFFF00- Short version of /wit start|r")
     print("  |cFFFF8000/wit end |cFFFFFF00- End tracking without saving statistics|r")
@@ -238,6 +239,7 @@ local function BuildSubcommands(options)
         ["help"] = { handler = PrintHelp, args = 0 },
         ["-h"] = { handler = PrintHelp, args = 0 },
         ["status"] = { handler = runTracker.PrintStatus, args = 0 },
+        ["update"] = { handler = runTracker.UpdateCurrentCharacterLevel, args = 0 },
         ["start"] = { handler = runTracker.StartManual, args = 0 },
         ["-s"] = { handler = runTracker.StartManual, args = 0 },
         ["end"] = { handler = HandleEnd },
