@@ -886,7 +886,8 @@ local function ProcessInstanceCompletion(saveRun, sendPartySummary)
         end
     end
 
-    if sendPartySummary and partyMessageEnabled then
+    -- Never send the completion party summary for max-level characters.
+    if sendPartySummary and partyMessageEnabled and not isMaxLevel then
         local partySummary = string_format(
             "[WIT] %s completed in %s. XP received: %s. Runs until next level: %s.",
             instanceName,
@@ -972,6 +973,12 @@ local function RefreshInstanceTrackingContext(eventSource)
 
     if not isPartyInstance then
         if HasTrackedRun() then
+            -- PLAYER_ENTERING_WORLD can briefly report a non-instance state during /reload.
+            if eventSource == "PLAYER_ENTERING_WORLD" then
+                DebugMessage("context-pending-world", "preserving tracked instance state")
+                return
+            end
+
             if runHadGroup and not HasActiveInstanceGroup() then
                 AbortCurrentRun(GetRecentGroupLossReason())
                 return

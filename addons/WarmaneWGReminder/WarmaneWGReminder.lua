@@ -1,11 +1,17 @@
 local addonName, addon = ...
 
 -- Cache frequently used functions
+local ipairs = ipairs
+local print = print
+local tostring = tostring
 local type = type
 local pcall = pcall
 local math_floor = math.floor
 local string_format = string.format
+local string_lower = string.lower
 local UnitLevel = UnitLevel
+local strsplit = strsplit
+local strtrim = strtrim
 
 -- Define color codes
 local COLOR = {
@@ -56,11 +62,24 @@ local function ResetReminders()
     end
 end
 
+-- Query the Wintergrasp timer API without throwing Lua errors
+local function QueryWintergraspWaitTime()
+    if type(GetWintergraspWaitTime) ~= "function" then
+        return false, nil
+    end
+
+    local success, waitTime = pcall(GetWintergraspWaitTime)
+    if not success then
+        return false, nil
+    end
+
+    return true, waitTime
+end
+
 -- Safely get time until next Wintergrasp battle
 local function GetTimeUntilBattle()
-    if not GetWintergraspWaitTime then return nil end
-    local success, waitTime = pcall(GetWintergraspWaitTime)
-    if success and type(waitTime) == "number" and waitTime > 0 then
+    local isAvailable, waitTime = QueryWintergraspWaitTime()
+    if isAvailable and type(waitTime) == "number" and waitTime > 0 then
         return waitTime
     end
     return nil
@@ -168,7 +187,7 @@ local function ActivateReminder(self)
         return
     end
 
-    if not GetWintergraspWaitTime then
+    if type(GetWintergraspWaitTime) ~= "function" then
         print(FormatMessage("WWR", "Wintergrasp timer API unavailable"))
         return
     end
@@ -230,23 +249,24 @@ end)
 -- Print help text listing available slash commands
 local function PrintHelp()
     print(FormatMessage("WWR", "Available commands:"))
-    print(string_format("  %s/wwr when %s- Prints the time until the next battle for Wintergrasp|r", COLOR.ORANGE, COLOR.YELLOW))
+    print(string_format("  %s/wwr when %s- Print when the next Wintergrasp battle starts|r", COLOR.ORANGE, COLOR.YELLOW))
+    print(string_format("  %s/wwr help %s- Show this help|r", COLOR.ORANGE, COLOR.YELLOW))
+    print(string_format("  %s/wwr -h %s- Short version of /wwr help|r", COLOR.ORANGE, COLOR.YELLOW))
 end
 
 -- Handle the /wwr when subcommand
 local function HandleWhen()
-    if not reminderActive then
-        print(FormatMessage("WWR", "Addon is active only at level", tostring(REQUIRED_LEVEL)))
+    local isAvailable, waitTime = QueryWintergraspWaitTime()
+    if not isAvailable then
+        print(FormatErrorMessage("WWR", "retrieve Wintergrasp timer data"))
         return
     end
 
-    local waitTime = GetTimeUntilBattle()
     if waitTime then
         print(FormatMessage("WWR", "Next battle for Wintergrasp starts in", FormatTime(waitTime)))
-    elseif battleActive then
-        print(FormatMessage("WWR", "Battle for Wintergrasp is active right now!"))
     else
-        print(FormatErrorMessage("WWR", "retrieve Wintergrasp timer data"))
+        -- Blizzard treats a nil or non-positive timer as battle in progress.
+        print(FormatMessage("WWR", "Battle for Wintergrasp is active right now!"))
     end
 end
 
@@ -254,22 +274,25 @@ end
 local SUBCOMMANDS = {
     ["when"] = { handler = HandleWhen, args = 0 },
     ["help"] = { handler = PrintHelp, args = 0 },
+    ["-h"] = { handler = PrintHelp, args = 0 },
 }
 
 -- Register slash command
 SLASH_WWR1 = "/wwr"
 SlashCmdList["WWR"] = function(msg)
-    -- Trim and lowercase input
-    msg = strtrim(msg):lower()
+    -- Normalize slash command input before dispatching to subcommands
+    local rawMsg = strtrim(msg or "")
 
     -- No arguments shows help
-    if msg == "" then
+    if rawMsg == "" then
         PrintHelp()
         return
     end
 
     -- Split input into subcommand and remaining args
-    local subcommand, args = strsplit(" ", msg, 2)
+    local subcommand, args = strsplit(" ", rawMsg, 2)
+    subcommand = subcommand and string_lower(subcommand) or ""
+    args = strtrim(args or "")
     local command = SUBCOMMANDS[subcommand]
 
     if not command then
@@ -279,11 +302,11 @@ SlashCmdList["WWR"] = function(msg)
     end
 
     -- Validate argument count
-    if command.args == 0 and args and strtrim(args) ~= "" then
+    if command.args == 0 and args ~= "" then
         print(FormatErrorMessage("WWR", string_format(
             "execute command. Wrong number of arguments for '%s' (expected 0)", subcommand)))
         return
     end
 
-    command.handler()
+    command.handler(args)
 end
