@@ -12,23 +12,25 @@ A big thanks goes to the owner of [`3.3.5-interface-files`](https://github.com/w
 ## 📋 Table of Contents
 
 - [Available AddOns](#-available-addons)
-    - [WarmaneInstanceTracker](#warmaneinstancetracker)
-    - [WarmaneWGReminder](#warmanewgreminder)
-    - [WarmaneChatCopy](#warmanechatcopy)
-    - [WarmaneTrackingAid](#warmanetrackingaid)
-    - [WarmaneHealerMana](#warmanehealermana)
-    - [WarmaneHealerProtection](#warmanehealerprotection)
-    - [WarmaneNotAway](#warmanenotaway)
+  - [WarmaneInstanceTracker](#warmaneinstancetracker)
+  - [WarmaneWGReminder](#warmanewgreminder)
+  - [WarmaneChatCopy](#warmanechatcopy)
+  - [WarmaneTrackingAid](#warmanetrackingaid)
+  - [WarmaneHealerMana](#warmanehealermana)
+  - [WarmaneHealerProtection](#warmanehealerprotection)
+  - [WarmaneNotAway](#warmanenotaway)
+- [Backported AddOns](#-backported-addons)
+  - [MBB](#mbb-minimapbuttonbag)
 - [Screenshots](#-screenshots)
-    - [WarmaneInstanceTracker](#warmaneinstancetracker-1)
-    - [WarmaneWGReminder](#warmanewgreminder-1)
-    - [WarmaneChatCopy](#warmanechatcopy-1)
-    - [WarmaneTrackingAid](#warmanetrackingaid-1)
-    - [WarmaneNotAway](#warmanenotaway-1)
+  - [WarmaneInstanceTracker](#warmaneinstancetracker-1)
+  - [WarmaneWGReminder](#warmanewgreminder-1)
+  - [WarmaneChatCopy](#warmanechatcopy-1)
+  - [WarmaneTrackingAid](#warmanetrackingaid-1)
+  - [WarmaneNotAway](#warmanenotaway-1)
 - [Installation](#️-installation)
 - [Feedback](#-feedback)
 - [Contributing](#-contributing)
-    - [Development Sync](#️-development-sync)
+  - [Development Sync](#️-development-sync)
 
 ## 📦 Available AddOns
 
@@ -135,6 +137,17 @@ for AI: create this section, should be similar to WarmaneHealerProtection below.
 - Uses Blizzard's built-in `autoClearAFK` option to keep behavior safe and lightweight
 - Re-enables AFK auto-clear when the AddOn loads and when entering the world
 - No key listener, no polling loop, and no manual `/afk` simulation
+
+## 🧩 Backported AddOns
+
+### MBB (MinimapButtonBag)
+
+🧳 Backported third-party minimap button bag for Warmane's WotLK 3.3.5a client.
+
+- Lives separately from first-party AddOns in `backports/MBB`
+- Collects minimap buttons into a single pop-out menu
+- Keeps the original AddOn identity while applying compatibility and bug fixes for this repository
+- Includes English UI text only
 
 ## 📸 Screenshots
 

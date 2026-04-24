@@ -14,10 +14,16 @@ if [[ -f "$ENV_FILE" ]]; then
   set +a
 fi
 
-SOURCE_DIR="${SYNC_ADDONS_SOURCE_DIR:-$REPO_ROOT/addons}"
+SOURCE_DIR="${SYNC_ADDONS_SOURCE_DIR:-}"
 DEST_DIR="${SYNC_ADDONS_DEST_DIR:-}"
 AUTO_INSTALL_RSYNC="${SYNC_ADDONS_AUTO_INSTALL_RSYNC:-0}"
 RSYNC_BIN="${SYNC_ADDONS_RSYNC_BIN:-}"
+
+if [[ -n "$SOURCE_DIR" ]]; then
+  SOURCE_DIRS=("$SOURCE_DIR")
+else
+  SOURCE_DIRS=("$REPO_ROOT/addons" "$REPO_ROOT/backports")
+fi
 
 IsEnabled() {
   case "${1:-}" in
@@ -77,20 +83,25 @@ if [[ -z "$DEST_DIR" ]]; then
   exit 1
 fi
 
-if [[ ! -d "$SOURCE_DIR" ]]; then
-  echo "Source addons directory not found: $SOURCE_DIR" >&2
-  exit 1
-fi
-
 if [[ ! -d "$DEST_DIR" ]]; then
   echo "Destination AddOns directory not found: $DEST_DIR" >&2
   exit 1
 fi
 
-mapfile -t addon_dirs < <(find "$SOURCE_DIR" -mindepth 1 -maxdepth 1 -type d | sort)
+addon_dirs=()
+for source_dir in "${SOURCE_DIRS[@]}"; do
+  if [[ ! -d "$source_dir" ]]; then
+    echo "Source addons directory not found: $source_dir" >&2
+    exit 1
+  fi
+
+  while IFS= read -r addon_dir; do
+    addon_dirs+=("$addon_dir")
+  done < <(find "$source_dir" -mindepth 1 -maxdepth 1 -type d | sort)
+done
 
 if [[ ${#addon_dirs[@]} -eq 0 ]]; then
-  echo "No addon directories found in: $SOURCE_DIR" >&2
+  echo "No addon directories found in configured source directories." >&2
   exit 1
 fi
 

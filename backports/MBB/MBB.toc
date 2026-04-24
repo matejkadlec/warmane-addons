@@ -1,0 +1,8 @@
+﻿## Interface: 30300
+## Title: MinimapButtonBag
+## Author: Tunhadil (backported by Matej Kadlec)
+## X-Category: Map
+## X-Repository: https://github.com/matejkadlec/warmane-addons
+## Notes: Cleans up minimap buttons and makes them accessible through a pop out menu!
+## SavedVariablesPerCharacter: MBB_Exclude, MBB_Options
+MBB.xml
