@@ -40,6 +40,8 @@ end
 
 -- Reminder thresholds in minutes before battle
 local REMINDER_MINUTES = {30, 15, 5}
+local INITIAL_NOTICE_UPPER_SECONDS = 15 * 60
+local FIVE_MINUTES_SECONDS = 5 * 60
 local REQUIRED_LEVEL = 80
 
 -- Polling interval in seconds
@@ -53,6 +55,7 @@ local remindersSent = {}
 local lastWaitTime = nil
 local battleActive = false
 local initialCheckDone = false
+local countdownInitialized = false
 local reminderActive = false
 
 -- Resets all reminder flags for the next battle cycle
@@ -115,25 +118,42 @@ local function FormatTime(seconds)
     end
 end
 
--- Initialize reminder flags based on current wait time
-local function InitializeReminders()
+-- Show one precise login message only inside the final 15 minutes, excluding the 5 minute threshold
+local function ShouldShowInitialWaitMessage(waitTime)
+    return waitTime < FIVE_MINUTES_SECONDS
+        or (waitTime > FIVE_MINUTES_SECONDS and waitTime < INITIAL_NOTICE_UPPER_SECONDS)
+end
+
+-- Store the current countdown state without replaying already-passed thresholds
+local function InitializeReminderState(waitTime, showInitialWaitMessage)
     ResetReminders()
-    local waitTime = GetTimeUntilBattle()
+
     if waitTime then
-        local minutesUntil = math_floor(waitTime / 60)
-        -- Mark past thresholds as already sent to avoid spam on login
         for _, minutes in ipairs(REMINDER_MINUTES) do
-            if minutesUntil <= minutes then
+            if waitTime < minutes * 60 then
                 remindersSent[minutes] = true
             end
         end
+
+        if showInitialWaitMessage and ShouldShowInitialWaitMessage(waitTime) then
+            print(FormatMessage("WWR", "Battle for Wintergrasp starts in", FormatTime(waitTime)))
+        end
+
         lastWaitTime = waitTime
         battleActive = false
+        countdownInitialized = true
     else
-        -- nil could mean battle active or outside Northrend
-        battleActive = true
+        -- A nil timer at login can mean active battle or unavailable API, so keep the state unknown.
+        battleActive = false
         lastWaitTime = nil
+        countdownInitialized = false
     end
+end
+
+-- Initialize reminder flags based on current wait time
+local function InitializeReminders(showInitialWaitMessage)
+    local waitTime = GetTimeUntilBattle()
+    InitializeReminderState(waitTime, showInitialWaitMessage)
 end
 
 -- Checks battle state transitions and sends reminders
@@ -141,6 +161,12 @@ local function CheckBattleStatus()
     local waitTime = GetTimeUntilBattle()
 
     if waitTime then
+        if not countdownInitialized and not battleActive then
+            InitializeReminderState(waitTime, true)
+            initialCheckDone = true
+            return
+        end
+
         -- We have a countdown, battle is not active
         if battleActive and initialCheckDone then
             -- Transition: battle was active, now ended (only notify if we were online)
@@ -152,15 +178,18 @@ local function CheckBattleStatus()
         end
 
         -- Check reminder thresholds
-        local minutesUntil = math_floor(waitTime / 60)
         for _, minutes in ipairs(REMINDER_MINUTES) do
-            if minutesUntil <= minutes and not remindersSent[minutes] then
+            local thresholdSeconds = minutes * 60
+            if waitTime <= thresholdSeconds
+                and (not lastWaitTime or lastWaitTime >= thresholdSeconds)
+                and not remindersSent[minutes] then
                 print(FormatMessage("WWR", "Battle for Wintergrasp starts in", minutes .. " minutes"))
                 remindersSent[minutes] = true
             end
         end
 
         lastWaitTime = waitTime
+        countdownInitialized = true
     else
         -- nil means battle is active or API unavailable
         if lastWaitTime and not battleActive and initialCheckDone then
@@ -171,6 +200,7 @@ local function CheckBattleStatus()
             battleActive = true
         end
         lastWaitTime = nil
+        countdownInitialized = false
     end
 
     initialCheckDone = true
@@ -192,7 +222,8 @@ local function ActivateReminder(self)
         return
     end
 
-    InitializeReminders()
+    initialCheckDone = false
+    InitializeReminders(true)
     self.timer = 0
     self:SetScript("OnUpdate", function(frameRef, elapsed)
         frameRef.timer = (frameRef.timer or 0) + elapsed
@@ -215,6 +246,7 @@ local function DeactivateReminder(self)
     lastWaitTime = nil
     battleActive = false
     initialCheckDone = false
+    countdownInitialized = false
 end
 
 -- Apply activation state based on current character level
