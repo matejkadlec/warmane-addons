@@ -87,8 +87,8 @@ A big thanks goes to the owner of [`3.3.5-interface-files`](https://github.com/w
 - Uses the in-game `GetWintergraspWaitTime()` API for accurate battle timing
 - Shows notifications at 30, 15, and 5 minutes before battle
 - Also shows notification right after the battle begins and ends
-- Slash command `/wwr when` to check time until next battle
-- Type `/wwr` or `/wwr help` for a list of available commands
+- Slash commands `/wwr` and `/wwr when` check time until next battle
+- Type `/wwr help` for a list of available commands
 
 > ℹ️ This AddOn is only activates if logged in as a level 80.
 
@@ -103,6 +103,8 @@ A big thanks goes to the owner of [`3.3.5-interface-files`](https://github.com/w
 - Does not intervene with item or quest links, usernames, etc.
 - Copying more messages makes them appear under eachother in the click order
 - Clear button to reset the copy window content
+- Slash command `/wcc` or `/wcc toggle` enables/disables copying persistently
+- Type `/wcc help` for a list of available commands
 
 ### WarmaneTrackingAid
 

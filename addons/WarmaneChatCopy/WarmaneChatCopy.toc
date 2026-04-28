@@ -3,5 +3,6 @@
 ## Notes: Click on the channel name to copy the chat message.
 ## Author: Matej Kadlec (https://github.com/matejkadlec)
 ## Version: 1.1
+## SavedVariables: WarmaneChatCopySettings
 
 WarmaneChatCopy.xml

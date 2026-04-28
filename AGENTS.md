@@ -72,7 +72,7 @@
 | ----- | --------- | ------------- | ----- |
 | WarmaneInstanceTracker | WIT | `/wit` | Instance run tracking, stats table, config, manual tracking, debug tools |
 | WarmaneWGReminder | WWR | `/wwr` | Wintergrasp timing reminders; level 80 only |
-| WarmaneChatCopy | WCC | none | Click chat messages/channel names to copy text |
+| WarmaneChatCopy | WCC | `/wcc` | Click chat messages/channel names to copy text |
 | WarmaneTrackingAid | WTA | none | Hunter tracking switcher; Hunters only |
 | WarmaneHealerMana | WHM | `/whm` | Healer low-mana party warning |
 | WarmaneHealerProtection | WHP | `/whp` | Healer aggro party warning |
@@ -133,7 +133,8 @@
 - Define subcommands in a `SUBCOMMANDS` table with `handler` and `args` fields
 - Current first-party slash commands:
   - `/wit`: `config`, `status`, `update`, `start`, `-s`, `end`, `end -s`, `-e`, `reset`, `pause`, `-p`, `continue`, `-c`, `debug`, `help`, `-h`
-  - `/wwr`: `when`, `help`, `-h`
+  - `/wwr`: bare command behaves like `when`; `when`, `help`, `-h`
+  - `/wcc`: bare command behaves like `toggle`; `toggle`, `help`
   - `/whm`: `help`, `delay`, `delay <seconds>`, `threshold`, `threshold <integer>`
   - `/whp`: `help`, `delay`, `delay <seconds>`
 

@@ -4,17 +4,70 @@ local originalSetItemRef
 
 -- Cache frequently used functions
 local gsub = gsub
+local print = print
+local string_format = string.format
+local string_lower = string.lower
 local strfind = strfind
 local strmatch = strmatch
 local strsub = strsub
+local strsplit = strsplit
+local strtrim = strtrim
+local type = type
 
 -- Import color codes
 local COLOR = {
     ORANGE = "|cFFFF8000",
-    YELLOW = "|cFFFFFF00"
+    YELLOW = "|cFFFFFF00",
+    RED = "|cFFFF0000"
 }
 
+local ADDON_PREFIX = "WCC"
+local DEFAULT_COPY_ENABLED = true
+
+-- Format general messages with prefix and optional value
+local function FormatMessage(prefix, msg, value)
+    if type(prefix) ~= "string" or type(msg) ~= "string" then return "" end
+    local formattedPrefix = string_format("%s[%s]", COLOR.ORANGE, prefix)
+    if value then
+        return string_format("%s %s%s %s%s|r",
+            formattedPrefix, COLOR.YELLOW, msg, COLOR.ORANGE, value)
+    end
+    return string_format("%s %s%s|r", formattedPrefix, COLOR.YELLOW, msg)
+end
+
+-- Format error messages with colored prefix and red body
+local function FormatErrorMessage(prefix, msg)
+    if type(prefix) ~= "string" or type(msg) ~= "string" then return "" end
+    return string_format("%s[%s] %sFailed to %s|r",
+        COLOR.ORANGE, prefix, COLOR.RED, msg)
+end
+
+-- Create the saved settings table and populate validated defaults
+local function InitializeSavedData()
+    if type(WarmaneChatCopySettings) ~= "table" then
+        WarmaneChatCopySettings = {}
+    end
+
+    if type(WarmaneChatCopySettings.enabled) ~= "boolean" then
+        WarmaneChatCopySettings.enabled = DEFAULT_COPY_ENABLED
+    end
+end
+
+-- Read the current persisted enabled state safely
+local function IsCopyEnabled()
+    InitializeSavedData()
+    return WarmaneChatCopySettings.enabled
+end
+
+-- Persist one validated enabled state
+local function SetCopyEnabled(enabled)
+    InitializeSavedData()
+    WarmaneChatCopySettings.enabled = enabled and true or false
+end
+
 function Initialize()
+    InitializeSavedData()
+
     -- Hook chat frame event handler
     if not originalChatFrame then 
         originalChatFrame = ChatFrame_OnEvent 
@@ -60,6 +113,11 @@ local function ShouldBypassCopyWrap(frame, message)
 end
 
 function HandleMessage(frame, msg, r, g, b, id, ...)
+    if not IsCopyEnabled() then
+        frame:originalMessage(msg, r, g, b, id, ...)
+        return
+    end
+
     if ShouldBypassCopyWrap(frame, msg) then
         frame:originalMessage(msg, r, g, b, id, ...)
         return
@@ -70,6 +128,10 @@ end
 
 -- Only the channel prefix should trigger copying so player links keep Blizzard behavior.
 function BuildCopyMessage(message)
+    if not IsCopyEnabled() then
+        return message
+    end
+
     if type(message) ~= "string" or not strfind(message, "|Hchannel:", 1, true) then
         return message
     end
@@ -158,6 +220,10 @@ end
 
 function HandleItemRef(link, text, button, chatFrame)
     if strsub(link, 1, 4) == "copy" then
+        if not IsCopyEnabled() then
+            return
+        end
+
         local decodedMessage = gsub(gsub(strsub(link, 5), "/2", "|"), "/1", "/")
         
         if not copyFrame:IsShown() then
@@ -181,5 +247,64 @@ function HandleItemRef(link, text, button, chatFrame)
     originalSetItemRef(link, text, button, chatFrame)
 end
 
+-- Print help text listing available slash commands
+local function PrintHelp()
+    print(FormatMessage(ADDON_PREFIX, "Available commands:"))
+    print("  |cFFFF8000/wcc |cFFFFFF00- Toggle chat copy on or off|r")
+    print("  |cFFFF8000/wcc toggle |cFFFFFF00- Toggle chat copy on or off|r")
+    print("  |cFFFF8000/wcc help |cFFFFFF00- Show this help|r")
+end
+
+-- Handle /wcc and /wcc toggle
+local function ToggleCopy()
+    SetCopyEnabled(not IsCopyEnabled())
+
+    if not IsCopyEnabled() and copyFrame and copyFrame:IsShown() then
+        copyFrame:Hide()
+    end
+
+    if IsCopyEnabled() then
+        print(FormatMessage(ADDON_PREFIX, "Chat copy enabled"))
+    else
+        print(FormatMessage(ADDON_PREFIX, "Chat copy disabled"))
+    end
+end
+
+local SUBCOMMANDS = {
+    ["toggle"] = { handler = ToggleCopy, args = 0 },
+    ["help"] = { handler = PrintHelp, args = 0 }
+}
+
+-- Register slash command parser following Blizzard pattern
+SLASH_WCC1 = "/wcc"
+SlashCmdList["WCC"] = function(msg)
+    local rawMsg = strtrim(msg or "")
+    local normalizedMsg = string_lower(rawMsg)
+
+    if normalizedMsg == "" then
+        ToggleCopy()
+        return
+    end
+
+    local subcommand = strsplit(" ", normalizedMsg, 2)
+    local command = SUBCOMMANDS[subcommand]
+    local _, rawArgs = strsplit(" ", rawMsg, 2)
+    rawArgs = strtrim(rawArgs or "")
+
+    if not command then
+        print(FormatErrorMessage(ADDON_PREFIX, string_format(
+            "find subcommand '%s'. Use /wcc help to see available commands", subcommand)))
+        return
+    end
+
+    if command.args == 0 and rawArgs ~= "" then
+        print(FormatErrorMessage(ADDON_PREFIX, string_format(
+            "execute command. Wrong number of arguments for '%s' (expected %d)", subcommand, command.args)))
+        return
+    end
+
+    command.handler(rawArgs)
+end
+
 -- Print loading message
-print(string.format("%s[WCC] %s%s|r", COLOR.ORANGE, COLOR.YELLOW, "WarmaneChatCopy loaded"))
+print(FormatMessage(ADDON_PREFIX, "WarmaneChatCopy loaded"))

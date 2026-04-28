@@ -281,6 +281,7 @@ end)
 -- Print help text listing available slash commands
 local function PrintHelp()
     print(FormatMessage("WWR", "Available commands:"))
+    print(string_format("  %s/wwr %s- Print when the next Wintergrasp battle starts|r", COLOR.ORANGE, COLOR.YELLOW))
     print(string_format("  %s/wwr when %s- Print when the next Wintergrasp battle starts|r", COLOR.ORANGE, COLOR.YELLOW))
     print(string_format("  %s/wwr help %s- Show this help|r", COLOR.ORANGE, COLOR.YELLOW))
     print(string_format("  %s/wwr -h %s- Short version of /wwr help|r", COLOR.ORANGE, COLOR.YELLOW))
@@ -315,9 +316,9 @@ SlashCmdList["WWR"] = function(msg)
     -- Normalize slash command input before dispatching to subcommands
     local rawMsg = strtrim(msg or "")
 
-    -- No arguments shows help
+    -- No arguments behave like /wwr when
     if rawMsg == "" then
-        PrintHelp()
+        HandleWhen()
         return
     end
 
