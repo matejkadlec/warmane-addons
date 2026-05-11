@@ -61,6 +61,7 @@ addon.ui.CreateStatsTable = function(options)
     local sortAscending = true
     local instanceLevelRangesByName = nil
     local configuredLevelRanges = addon.DUNGEON_LEVEL_RANGES or {}
+    local displayNameAliases = addon.DUNGEON_INSTANCE_NAME_ALIASES or {}
 
     local function BuildInstanceLevelRanges()
         local ranges = {}
@@ -111,25 +112,27 @@ addon.ui.CreateStatsTable = function(options)
             return ""
         end
 
+        local displayName = displayNameAliases[rawName] or rawName
+
         if type(instanceLevelRangesByName) ~= "table" then
             instanceLevelRangesByName = BuildInstanceLevelRanges()
         end
 
-        local range = instanceLevelRangesByName[rawName]
+        local range = instanceLevelRangesByName[displayName] or instanceLevelRangesByName[rawName]
         if type(range) ~= "table" then
-            range = configuredLevelRanges[rawName]
+            range = configuredLevelRanges[displayName] or configuredLevelRanges[rawName]
         end
         if type(range) ~= "table" then
-            return rawName
+            return displayName
         end
 
         local minLevel = range.minLevel
         local maxLevel = range.maxLevel
         if type(minLevel) ~= "number" or type(maxLevel) ~= "number" then
-            return rawName
+            return displayName
         end
 
-        return string_format("%s (%d - %d)", rawName, minLevel, maxLevel)
+        return string_format("%s (%d - %d)", displayName, minLevel, maxLevel)
     end
 
     local function FormatNumberWithCommas(number)

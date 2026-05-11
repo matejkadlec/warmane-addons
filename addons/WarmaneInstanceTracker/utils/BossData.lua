@@ -34,29 +34,29 @@ addon.DUNGEON_FINAL_BOSSES = {
     -- Uldaman
     [2748] = "Uldaman", -- Archaedas
     -- Maraudon Orange
-    [12258] = "Maraudon", -- Noxxion
+    [12258] = "Maraudon - Orange Crystals", -- Razorlash
     -- Maraudon Purple
-    [12236] = "Maraudon", -- Lord Vyletongue
-    -- Maraudon Poison Falls
-    [12225] = "Maraudon", -- Celebras the Cursed
+    [12236] = "Maraudon - Purple Crystals", -- Lord Vyletongue
     -- Maraudon Inner
-    [12201] = "Maraudon", -- Princess Theradras
+    [12201] = "Maraudon - Pristine Waters", -- Princess Theradras
     -- Zul'Farrak
     [7267] = "Zul'Farrak", -- Chief Ukorz Sandscalp
     -- Sunken Temple
-    [5709] = "The Temple of Atal'Hakkar", -- Shade of Eranikus
-    -- Blackrock Depths
-    [9019] = "Blackrock Depths", -- Emperor Dagran Thaurissan
+    [5709] = "Sunken Temple", -- Shade of Eranikus
+    -- Blackrock Depths Prison
+    [9018] = "Blackrock Depths - Prison", -- High Interrogator Gerstahn
+    -- Blackrock Depths Upper City
+    [9019] = "Blackrock Depths - Upper City", -- Emperor Dagran Thaurissan
     -- Dire Maul East
-    [11492] = "Dire Maul", -- Alzzin the Wildshaper
+    [11492] = "Dire Maul - East", -- Alzzin the Wildshaper
     -- Dire Maul North
-    [14324] = "Dire Maul", -- Cho'Rush the Observer
+    [11501] = "Dire Maul - North", -- King Gordok
     -- Dire Maul West
-    [11486] = "Dire Maul", -- Prince Tortheldrin
+    [11486] = "Dire Maul - West", -- Prince Tortheldrin
     -- Stratholme Living Side
-    [10813] = "Stratholme", -- Balnazzar
+    [10813] = "Stratholme - Main Gate", -- Balnazzar
     -- Stratholme Undead Side
-    [10440] = "Stratholme", -- Baron Rivendare
+    [10440] = "Stratholme - Service Entrance", -- Baron Rivendare
     -- Scholomance
     [1853] = "Scholomance", -- Darkmaster Gandling
 
@@ -147,6 +147,25 @@ addon.DUNGEON_BASE_INSTANCE_NAMES = {
     ["Scarlet Monastery - Library"] = "Scarlet Monastery",
     ["Scarlet Monastery - Armory"] = "Scarlet Monastery",
     ["Scarlet Monastery - Cathedral"] = "Scarlet Monastery",
+    ["Maraudon - Purple Crystals"] = "Maraudon",
+    ["Maraudon - Orange Crystals"] = "Maraudon",
+    ["Maraudon - Pristine Waters"] = "Maraudon",
+    ["Blackrock Depths - Prison"] = "Blackrock Depths",
+    ["Blackrock Depths - Upper City"] = "Blackrock Depths",
+    ["Dire Maul - East"] = "Dire Maul",
+    ["Dire Maul - North"] = "Dire Maul",
+    ["Dire Maul - West"] = "Dire Maul",
+    ["Stratholme - Main Gate"] = "Stratholme",
+    ["Stratholme - Service Entrance"] = "Stratholme",
+}
+
+-- Canonical names for older client zone names and legacy saved rows
+addon.DUNGEON_INSTANCE_NAME_ALIASES = {
+    ["The Temple of Atal'Hakkar"] = "Sunken Temple",
+    ["Blackrock Depths - Detention Block"] = "Blackrock Depths - Prison",
+    ["Dire Maul - Warpwood Quarter"] = "Dire Maul - East",
+    ["Dire Maul - Capital Gardens"] = "Dire Maul - West",
+    ["Dire Maul - Gordok Commons"] = "Dire Maul - North",
 }
 
 -- Warmane RDF level brackets used when the client LFD table is unavailable
@@ -155,6 +174,21 @@ addon.DUNGEON_LEVEL_RANGES = {
     ["Scarlet Monastery - Library"] = { minLevel = 29, maxLevel = 39 },
     ["Scarlet Monastery - Armory"] = { minLevel = 32, maxLevel = 42 },
     ["Scarlet Monastery - Cathedral"] = { minLevel = 35, maxLevel = 45 },
+    ["Maraudon - Purple Crystals"] = { minLevel = 39, maxLevel = 49 },
+    ["Maraudon - Orange Crystals"] = { minLevel = 41, maxLevel = 51 },
+    ["Maraudon - Pristine Waters"] = { minLevel = 43, maxLevel = 53 },
+    ["Maraudon"] = { minLevel = 39, maxLevel = 53 },
+    ["Sunken Temple"] = { minLevel = 45, maxLevel = 55 },
+    ["Blackrock Depths - Prison"] = { minLevel = 47, maxLevel = 57 },
+    ["Blackrock Depths - Upper City"] = { minLevel = 51, maxLevel = 61 },
+    ["Blackrock Depths"] = { minLevel = 47, maxLevel = 61 },
+    ["Dire Maul - East"] = { minLevel = 36, maxLevel = 46 },
+    ["Dire Maul - West"] = { minLevel = 39, maxLevel = 49 },
+    ["Dire Maul - North"] = { minLevel = 42, maxLevel = 52 },
+    ["Dire Maul"] = { minLevel = 36, maxLevel = 52 },
+    ["Stratholme - Main Gate"] = { minLevel = 42, maxLevel = 52 },
+    ["Stratholme - Service Entrance"] = { minLevel = 46, maxLevel = 56 },
+    ["Stratholme"] = { minLevel = 42, maxLevel = 56 },
 }
 
 -- Known boss NPC IDs used for boss-only debug output
@@ -185,3 +219,8 @@ addon.DUNGEON_DEBUG_BOSSES[3671] = true -- Lady Anacondra
 addon.DUNGEON_DEBUG_BOSSES[3672] = true -- Verdan the Everliving
 addon.DUNGEON_DEBUG_BOSSES[3673] = true -- Lord Serpentis
 addon.DUNGEON_DEBUG_BOSSES[3674] = true -- Skum
+-- Maraudon
+addon.DUNGEON_DEBUG_BOSSES[12225] = true -- Celebras the Cursed
+addon.DUNGEON_DEBUG_BOSSES[13282] = true -- Noxxion
+-- Dire Maul North
+addon.DUNGEON_DEBUG_BOSSES[14324] = true -- Cho'Rush the Observer

@@ -31,6 +31,7 @@ local vars = addon.vars or {}
 local DUNGEON_FINAL_BOSSES = addon.DUNGEON_FINAL_BOSSES
 local DUNGEON_DEBUG_BOSSES = addon.DUNGEON_DEBUG_BOSSES or {}
 local DUNGEON_BASE_INSTANCE_NAMES = addon.DUNGEON_BASE_INSTANCE_NAMES or {}
+local DUNGEON_INSTANCE_NAME_ALIASES = addon.DUNGEON_INSTANCE_NAME_ALIASES or {}
 
 local COLOR = {
     ORANGE = "|cFFFF8000",
@@ -185,25 +186,56 @@ local function NormalizeInstanceName(rawName)
     return normalized
 end
 
+-- Resolve known legacy or client zone names to the AddOn's saved display name
+local function GetCanonicalInstanceName(rawName)
+    if type(rawName) ~= "string" then
+        return rawName
+    end
+
+    return DUNGEON_INSTANCE_NAME_ALIASES[rawName] or rawName
+end
+
 -- Use parent instance names for wing matching when the client reports only a base zone
 local function GetComparableInstanceName(rawName)
     if type(rawName) ~= "string" then
         return rawName
     end
 
-    return DUNGEON_BASE_INSTANCE_NAMES[rawName] or rawName
+    return DUNGEON_BASE_INSTANCE_NAMES[rawName] or GetCanonicalInstanceName(rawName)
 end
 
 -- Compare two instance names after normalization to avoid strict-text mismatches
 local function AreInstanceNamesEquivalent(leftName, rightName)
-    local normalizedLeft = NormalizeInstanceName(GetComparableInstanceName(leftName))
-    local normalizedRight = NormalizeInstanceName(GetComparableInstanceName(rightName))
+    local canonicalLeft = GetCanonicalInstanceName(leftName)
+    local canonicalRight = GetCanonicalInstanceName(rightName)
+    local normalizedLeft = NormalizeInstanceName(canonicalLeft)
+    local normalizedRight = NormalizeInstanceName(canonicalRight)
 
     if not normalizedLeft or not normalizedRight then
         return false
     end
 
-    return normalizedLeft == normalizedRight
+    if normalizedLeft == normalizedRight then
+        return true
+    end
+
+    local leftBaseName = type(canonicalLeft) == "string" and DUNGEON_BASE_INSTANCE_NAMES[canonicalLeft] or nil
+    local rightBaseName = type(canonicalRight) == "string" and DUNGEON_BASE_INSTANCE_NAMES[canonicalRight] or nil
+
+    -- Different known wings should not complete each other just because they share a parent zone.
+    if leftBaseName and rightBaseName then
+        return false
+    end
+
+    if leftBaseName and NormalizeInstanceName(leftBaseName) == normalizedRight then
+        return true
+    end
+
+    if rightBaseName and normalizedLeft == NormalizeInstanceName(rightBaseName) then
+        return true
+    end
+
+    return false
 end
 
 -- Remember the exact LFG proposal name so winged dungeons are tracked precisely
