@@ -1286,6 +1286,7 @@ end
 function runTracker.SetInstanceTrackingEnabled(enabled)
     instanceTrackingEnabled = enabled and true or false
     utils.SetInstanceTrackingEnabled(instanceTrackingEnabled)
+    RefreshConfigCheckboxes()
 
     if not instanceTrackingEnabled then
         if HasTrackedRun() then
@@ -1295,6 +1296,11 @@ function runTracker.SetInstanceTrackingEnabled(enabled)
         end
         ClearIgnoredInProgressState()
     end
+end
+
+-- Return whether automatic instance tracking is enabled
+function runTracker.IsInstanceTrackingEnabled()
+    return instanceTrackingEnabled
 end
 
 -- Toggle party completion messages
@@ -1452,7 +1458,7 @@ end
 -- Start tracking manually from the current party instance
 function runTracker.StartManual()
     if not instanceTrackingEnabled then
-        print(common.Message("WIT", "Instance tracking is disabled. Enable it in /wit config first."))
+        print(common.Message("WIT", "Instance tracking is disabled. Run /wit on first."))
         return
     end
 

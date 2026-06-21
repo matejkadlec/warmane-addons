@@ -13,11 +13,14 @@ local common = addon.common
 local runTracker = addon.runTracker
 
 local slashCommands = {}
+local ADDON_FULL_NAME = "WarmaneInstanceTracker"
 
 -- Print slash command help text
 local function PrintHelp()
     print(common.Message("WIT", "Available commands:"))
     print("  |cFFFF8000/wit |cFFFFFF00- Open or close the stats table|r")
+    print("  |cFFFF8000/wit on |cFFFFFF00- Enable instance tracking|r")
+    print("  |cFFFF8000/wit off |cFFFFFF00- Disable instance tracking|r")
     print("  |cFFFF8000/wit config |cFFFFFF00- Open or close the settings window|r")
     print("  |cFFFF8000/wit status |cFFFFFF00- Show current tracking state|r")
     print("  |cFFFF8000/wit update |cFFFFFF00- Update saved rows with this character's current level|r")
@@ -34,6 +37,28 @@ local function PrintHelp()
     print("  |cFFFF8000/wit debug |cFFFFFF00- Show debug subcommands|r")
     print("  |cFFFF8000/wit help |cFFFFFF00- Show this help|r")
     print("  |cFFFF8000/wit -h |cFFFFFF00- Short version of /wit help|r")
+end
+
+-- Enable or disable instance tracking without reloading the UI
+local function SetAddonEnabled(enabled)
+    local currentlyEnabled = type(runTracker.IsInstanceTrackingEnabled) == "function"
+        and runTracker.IsInstanceTrackingEnabled()
+
+    if currentlyEnabled == enabled then
+        print(common.Message("WIT", string_format("%s is already %s.", ADDON_FULL_NAME, enabled and "enabled" or "disabled")))
+        return
+    end
+
+    runTracker.SetInstanceTrackingEnabled(enabled)
+    print(common.Message("WIT", string_format("%s %s.", ADDON_FULL_NAME, enabled and "enabled" or "disabled")))
+end
+
+local function EnableAddon()
+    SetAddonEnabled(true)
+end
+
+local function DisableAddon()
+    SetAddonEnabled(false)
 end
 
 -- Print help text for debug subcommands
@@ -234,6 +259,8 @@ end
 -- Define available slash subcommands and aliases
 local function BuildSubcommands(options)
     return {
+        ["on"] = { handler = EnableAddon, args = 0 },
+        ["off"] = { handler = DisableAddon, args = 0 },
         ["config"] = { handler = options.toggleConfig, args = 0 },
         ["debug"] = { handler = HandleDebug },
         ["help"] = { handler = PrintHelp, args = 0 },

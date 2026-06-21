@@ -43,6 +43,9 @@ local REMINDER_MINUTES = {30, 15, 5}
 local INITIAL_NOTICE_UPPER_SECONDS = 15 * 60
 local FIVE_MINUTES_SECONDS = 5 * 60
 local REQUIRED_LEVEL = 80
+local ADDON_PREFIX = "WWR"
+local ADDON_FULL_NAME = "WarmaneWGReminder"
+local DEFAULT_ADDON_ENABLED = true
 
 -- Polling interval in seconds
 local CHECK_INTERVAL = 5
@@ -57,6 +60,29 @@ local battleActive = false
 local initialCheckDone = false
 local countdownInitialized = false
 local reminderActive = false
+
+-- Create the saved settings table and populate validated defaults
+local function InitializeSavedData()
+    if type(WarmaneWGReminderSettings) ~= "table" then
+        WarmaneWGReminderSettings = {}
+    end
+
+    if type(WarmaneWGReminderSettings.enabled) ~= "boolean" then
+        WarmaneWGReminderSettings.enabled = DEFAULT_ADDON_ENABLED
+    end
+end
+
+-- Read the current persisted enabled state safely
+local function IsAddonEnabled()
+    InitializeSavedData()
+    return WarmaneWGReminderSettings.enabled
+end
+
+-- Persist one validated enabled state
+local function SetSavedAddonEnabled(enabled)
+    InitializeSavedData()
+    WarmaneWGReminderSettings.enabled = enabled and true or false
+end
 
 -- Resets all reminder flags for the next battle cycle
 local function ResetReminders()
@@ -136,7 +162,7 @@ local function InitializeReminderState(waitTime, showInitialWaitMessage)
         end
 
         if showInitialWaitMessage and ShouldShowInitialWaitMessage(waitTime) then
-            print(FormatMessage("WWR", "Battle for Wintergrasp starts in", FormatTime(waitTime)))
+            print(FormatMessage(ADDON_PREFIX, "Battle for Wintergrasp starts in", FormatTime(waitTime)))
         end
 
         lastWaitTime = waitTime
@@ -170,7 +196,7 @@ local function CheckBattleStatus()
         -- We have a countdown, battle is not active
         if battleActive and initialCheckDone then
             -- Transition: battle was active, now ended (only notify if we were online)
-            print(FormatMessage("WWR", "Battle for Wintergrasp has ended"))
+            print(FormatMessage(ADDON_PREFIX, "Battle for Wintergrasp has ended"))
         end
         if battleActive then
             ResetReminders()
@@ -183,7 +209,7 @@ local function CheckBattleStatus()
             if waitTime <= thresholdSeconds
                 and (not lastWaitTime or lastWaitTime >= thresholdSeconds)
                 and not remindersSent[minutes] then
-                print(FormatMessage("WWR", "Battle for Wintergrasp starts in", minutes .. " minutes"))
+                print(FormatMessage(ADDON_PREFIX, "Battle for Wintergrasp starts in", minutes .. " minutes"))
                 remindersSent[minutes] = true
             end
         end
@@ -194,7 +220,7 @@ local function CheckBattleStatus()
         -- nil means battle is active or API unavailable
         if lastWaitTime and not battleActive and initialCheckDone then
             -- Transition: had countdown, now nil → battle started (only notify if we were online)
-            print(FormatMessage("WWR", "Battle for Wintergrasp has started!"))
+            print(FormatMessage(ADDON_PREFIX, "Battle for Wintergrasp has started!"))
         end
         if lastWaitTime and not battleActive then
             battleActive = true
@@ -212,13 +238,13 @@ local function IsReminderAllowedForLevel()
 end
 
 -- Start reminder polling and initialize runtime state
-local function ActivateReminder(self)
+local function ActivateReminder(self, showLoadedMessage)
     if reminderActive then
         return
     end
 
     if type(GetWintergraspWaitTime) ~= "function" then
-        print(FormatMessage("WWR", "Wintergrasp timer API unavailable"))
+        print(FormatMessage(ADDON_PREFIX, "Wintergrasp timer API unavailable"))
         return
     end
 
@@ -234,7 +260,9 @@ local function ActivateReminder(self)
     end)
 
     reminderActive = true
-    print(FormatMessage("WWR", "WarmaneWGReminder loaded"))
+    if showLoadedMessage then
+        print(FormatMessage(ADDON_PREFIX, ADDON_FULL_NAME .. " loaded"))
+    end
 end
 
 -- Stop reminder polling and clear transient state
@@ -250,11 +278,34 @@ local function DeactivateReminder(self)
 end
 
 -- Apply activation state based on current character level
-local function RefreshReminderActivation(self)
+local function RefreshReminderActivation(self, showLoadedMessage)
+    if not IsAddonEnabled() then
+        DeactivateReminder(self)
+        return
+    end
+
     if IsReminderAllowedForLevel() then
-        ActivateReminder(self)
+        ActivateReminder(self, showLoadedMessage)
     else
         DeactivateReminder(self)
+    end
+end
+
+-- Enable or disable reminders without reloading the UI
+local function SetAddonEnabled(enabled)
+    local currentlyEnabled = IsAddonEnabled()
+    if currentlyEnabled == enabled then
+        print(FormatMessage(ADDON_PREFIX, string_format("%s is already %s.", ADDON_FULL_NAME, enabled and "enabled" or "disabled")))
+        return
+    end
+
+    SetSavedAddonEnabled(enabled)
+    if enabled then
+        RefreshReminderActivation(frame, false)
+        print(FormatMessage(ADDON_PREFIX, ADDON_FULL_NAME .. " enabled."))
+    else
+        DeactivateReminder(frame)
+        print(FormatMessage(ADDON_PREFIX, ADDON_FULL_NAME .. " disabled."))
     end
 end
 
@@ -267,9 +318,10 @@ frame:RegisterEvent("PLAYER_LEVEL_UP")
 -- Event handler
 frame:SetScript("OnEvent", function(self, event, ...)
     if event == "ADDON_LOADED" and ... == addonName then
-        RefreshReminderActivation(self)
+        InitializeSavedData()
+        RefreshReminderActivation(self, true)
     elseif event == "PLAYER_ENTERING_WORLD" or event == "PLAYER_LEVEL_UP" then
-        RefreshReminderActivation(self)
+        RefreshReminderActivation(self, false)
     elseif event == "PLAYER_LEAVING_WORLD" then
         -- Clean up timer before logout/reload
         self:SetScript("OnUpdate", nil)
@@ -280,8 +332,10 @@ end)
 
 -- Print help text listing available slash commands
 local function PrintHelp()
-    print(FormatMessage("WWR", "Available commands:"))
+    print(FormatMessage(ADDON_PREFIX, "Available commands:"))
     print(string_format("  %s/wwr %s- Print when the next Wintergrasp battle starts|r", COLOR.ORANGE, COLOR.YELLOW))
+    print(string_format("  %s/wwr on %s- Enable Wintergrasp reminders|r", COLOR.ORANGE, COLOR.YELLOW))
+    print(string_format("  %s/wwr off %s- Disable Wintergrasp reminders|r", COLOR.ORANGE, COLOR.YELLOW))
     print(string_format("  %s/wwr when %s- Print when the next Wintergrasp battle starts|r", COLOR.ORANGE, COLOR.YELLOW))
     print(string_format("  %s/wwr help %s- Show this help|r", COLOR.ORANGE, COLOR.YELLOW))
     print(string_format("  %s/wwr -h %s- Short version of /wwr help|r", COLOR.ORANGE, COLOR.YELLOW))
@@ -291,20 +345,30 @@ end
 local function HandleWhen()
     local isAvailable, waitTime = QueryWintergraspWaitTime()
     if not isAvailable then
-        print(FormatErrorMessage("WWR", "retrieve Wintergrasp timer data"))
+        print(FormatErrorMessage(ADDON_PREFIX, "retrieve Wintergrasp timer data"))
         return
     end
 
     if waitTime then
-        print(FormatMessage("WWR", "Next battle for Wintergrasp starts in", FormatTime(waitTime)))
+        print(FormatMessage(ADDON_PREFIX, "Next battle for Wintergrasp starts in", FormatTime(waitTime)))
     else
         -- Blizzard treats a nil or non-positive timer as battle in progress.
-        print(FormatMessage("WWR", "Battle for Wintergrasp is active right now!"))
+        print(FormatMessage(ADDON_PREFIX, "Battle for Wintergrasp is active right now!"))
     end
+end
+
+local function EnableAddon()
+    SetAddonEnabled(true)
+end
+
+local function DisableAddon()
+    SetAddonEnabled(false)
 end
 
 -- Define available subcommands
 local SUBCOMMANDS = {
+    ["on"] = { handler = EnableAddon, args = 0 },
+    ["off"] = { handler = DisableAddon, args = 0 },
     ["when"] = { handler = HandleWhen, args = 0 },
     ["help"] = { handler = PrintHelp, args = 0 },
     ["-h"] = { handler = PrintHelp, args = 0 },
@@ -329,14 +393,14 @@ SlashCmdList["WWR"] = function(msg)
     local command = SUBCOMMANDS[subcommand]
 
     if not command then
-        print(FormatErrorMessage("WWR", string_format(
+        print(FormatErrorMessage(ADDON_PREFIX, string_format(
             "find subcommand '%s'. Use /wwr help to see available commands", subcommand)))
         return
     end
 
     -- Validate argument count
     if command.args == 0 and args ~= "" then
-        print(FormatErrorMessage("WWR", string_format(
+        print(FormatErrorMessage(ADDON_PREFIX, string_format(
             "execute command. Wrong number of arguments for '%s' (expected 0)", subcommand)))
         return
     end

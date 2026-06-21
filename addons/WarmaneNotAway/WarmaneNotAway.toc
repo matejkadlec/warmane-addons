@@ -3,5 +3,6 @@
 ## Notes: Automatically clears your Away status when you become active.
 ## Author: Matej Kadlec (https://github.com/matejkadlec)
 ## Version: 1.0
+## SavedVariables: WarmaneNotAwaySettings
 
 WarmaneNotAway.lua

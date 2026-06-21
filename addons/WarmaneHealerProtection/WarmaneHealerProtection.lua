@@ -43,6 +43,8 @@ local MIN_ALERT_DELAY = 5
 local MAX_ALERT_DELAY = 120
 local CHECK_INTERVAL = 0.5
 local RECENT_ATTACK_TTL = 4
+local ADDON_FULL_NAME = "WarmaneHealerProtection"
+local DEFAULT_ADDON_ENABLED = true
 
 local ATTACK_EVENTS = {
     DAMAGE_SHIELD = true,
@@ -95,6 +97,10 @@ local function InitializeSavedData()
         HealerProtectionSettings = {}
     end
 
+    if type(HealerProtectionSettings.enabled) ~= "boolean" then
+        HealerProtectionSettings.enabled = DEFAULT_ADDON_ENABLED
+    end
+
     local savedDelay = HealerProtectionSettings.alertDelay
     if type(savedDelay) ~= "number" or
         savedDelay < MIN_ALERT_DELAY or
@@ -102,6 +108,18 @@ local function InitializeSavedData()
         savedDelay ~= math_floor(savedDelay) then
         HealerProtectionSettings.alertDelay = DEFAULT_ALERT_DELAY
     end
+end
+
+-- Read the current persisted enabled state safely
+local function IsAddonEnabled()
+    InitializeSavedData()
+    return HealerProtectionSettings.enabled
+end
+
+-- Persist one validated enabled state
+local function SetSavedAddonEnabled(enabled)
+    InitializeSavedData()
+    HealerProtectionSettings.enabled = enabled and true or false
 end
 
 -- Read the current persisted delay safely
@@ -159,7 +177,7 @@ local function IsActiveDungeonInstance()
     return success and isInstance and instanceType == "party"
 end
 
--- Return whether the player is currently assigned as healer
+-- Return whether the player is currently assigned as a healer
 local function IsPlayerHealer()
     if type(UnitGroupRolesAssigned) ~= "function" then
         return false
@@ -327,6 +345,10 @@ end
 
 -- Check all activation conditions and send at most one alert per cooldown
 local function CheckAggroAlert()
+    if not IsAddonEnabled() then
+        return
+    end
+
     local now = GetTime()
     if now - lastAlertAt < GetAlertDelay() then
         return
@@ -356,6 +378,8 @@ end
 -- Print slash command help text
 local function PrintHelp()
     print(FormatMessage(ADDON_PREFIX, "Available commands:"))
+    print("  |cFFFF8000/whp on |cFFFFFF00- Enable healer protection warnings|r")
+    print("  |cFFFF8000/whp off |cFFFFFF00- Disable healer protection warnings|r")
     print("  |cFFFF8000/whp help |cFFFFFF00- Show this help|r")
     print("  |cFFFF8000/whp delay |cFFFFFF00- Show the current warning delay|r")
     print("  |cFFFF8000/whp delay <seconds> |cFFFFFF00- Set the warning delay (5-120)|r")
@@ -419,9 +443,35 @@ local function HandleDelay(args)
     print(FormatMessage(ADDON_PREFIX, "Warning delay set to", tostring(seconds)))
 end
 
+-- Enable or disable healer protection warnings without reloading the UI
+local function SetAddonEnabled(enabled)
+    local currentlyEnabled = IsAddonEnabled()
+    if currentlyEnabled == enabled then
+        print(FormatMessage(ADDON_PREFIX, string_format("%s is already %s.", ADDON_FULL_NAME, enabled and "enabled" or "disabled")))
+        return
+    end
+
+    SetSavedAddonEnabled(enabled)
+    lastAlertAt = -GetAlertDelay()
+    if not enabled then
+        ResetAggroState()
+    end
+    print(FormatMessage(ADDON_PREFIX, string_format("%s %s.", ADDON_FULL_NAME, enabled and "enabled" or "disabled")))
+end
+
+local function EnableAddon()
+    SetAddonEnabled(true)
+end
+
+local function DisableAddon()
+    SetAddonEnabled(false)
+end
+
 -- Register slash command parser following Blizzard pattern
 local function RegisterSlashCommands()
     local subcommands = {
+        ["on"] = { handler = EnableAddon, args = 0 },
+        ["off"] = { handler = DisableAddon, args = 0 },
         ["help"] = { handler = PrintHelp, args = 0 },
         ["delay"] = { handler = HandleDelay }
     }
@@ -496,7 +546,9 @@ frame:SetScript("OnEvent", function(self, event, ...)
     end
 
     if event == "COMBAT_LOG_EVENT_UNFILTERED" then
-        HandleCombatLogEvent(...)
+        if IsAddonEnabled() then
+            HandleCombatLogEvent(...)
+        end
     end
 
     CheckAggroAlert()

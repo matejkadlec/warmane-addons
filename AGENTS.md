@@ -73,10 +73,10 @@
 | WarmaneInstanceTracker | WIT | `/wit` | Instance run tracking, stats table, config, manual tracking, debug tools |
 | WarmaneWGReminder | WWR | `/wwr` | Wintergrasp timing reminders; level 80 only |
 | WarmaneChatCopy | WCC | `/wcc` | Click chat messages/channel names to copy text |
-| WarmaneTrackingAid | WTA | none | Hunter tracking switcher; Hunters only |
+| WarmaneTrackingAid | WTA | `/wta` | Hunter tracking switcher; Hunters only |
 | WarmaneHealerMana | WHM | `/whm` | Healer low-mana party warning |
 | WarmaneHealerProtection | WHP | `/whp` | Healer aggro party warning |
-| WarmaneNotAway | WNA | none | Automatically re-enables/uses Blizzard AFK auto-clear |
+| WarmaneNotAway | WNA | `/wna` | Automatically re-enables/uses Blizzard AFK auto-clear |
 
 ### Backported AddOns (`backports/`)
 
@@ -123,7 +123,10 @@
 - Command name is the AddOn shortname in lowercase (e.g. `/wwr`, `/wit`, `/whm`)
 - Typing `/cmd` with no arguments shows help (list of available subcommands)
   - Exception: `/wit` with no arguments opens or closes the stats table; `/wit help` shows help
+  - Exception: `/wwr` with no arguments behaves like `/wwr when`
 - `help` subcommand also shows the same help output
+- All first-party slash commands include `on` and `off` subcommands that enable/disable the AddOn without requiring a UI reload
+- In help output, `on` and `off` are listed immediately after the bare `/cmd` entry when that entry is shown, otherwise before other subcommands
 - Help format: one line per subcommand, indented with two spaces:
   - `  |cFFFF8000/cmd subcommand |cFFFFFF00- Description of the subcommand|r`
 - Unknown subcommand → error: `"find subcommand 'X'. Use /cmd help to see available commands"`
@@ -132,11 +135,13 @@
 - Input is trimmed and lowercased before command lookup; preserve raw argument text where case or spacing matters, such as quoted instance names
 - Define subcommands in a `SUBCOMMANDS` table with `handler` and `args` fields
 - Current first-party slash commands:
-  - `/wit`: `config`, `status`, `update`, `start`, `-s`, `end`, `end -s`, `-e`, `reset`, `pause`, `-p`, `continue`, `-c`, `debug`, `help`, `-h`
-  - `/wwr`: bare command behaves like `when`; `when`, `help`, `-h`
-  - `/wcc`: bare command behaves like `toggle`; `toggle`, `help`
-  - `/whm`: `help`, `delay`, `delay <seconds>`, `threshold`, `threshold <integer>`
-  - `/whp`: `help`, `delay`, `delay <seconds>`
+  - `/wit`: bare command opens/closes stats table; `on`, `off`, `config`, `status`, `update`, `start`, `-s`, `end`, `end -s`, `-e`, `reset`, `pause`, `-p`, `continue`, `-c`, `debug`, `help`, `-h`
+  - `/wwr`: bare command behaves like `when`; `on`, `off`, `when`, `help`, `-h`
+  - `/wcc`: bare command behaves like `help`; `on`, `off`, `help`
+  - `/wta`: bare command behaves like `help`; `on`, `off`, `help`
+  - `/whm`: `on`, `off`, `help`, `delay`, `delay <seconds>`, `threshold`, `threshold <integer>`
+  - `/whp`: `on`, `off`, `help`, `delay`, `delay <seconds>`
+  - `/wna`: bare command behaves like `help`; `on`, `off`, `help`
 
 ---
 

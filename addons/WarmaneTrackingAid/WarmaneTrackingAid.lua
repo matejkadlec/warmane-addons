@@ -1,20 +1,29 @@
 local addonName, addon = ...
 
 -- Cache frequently used functions
+local print = print
 local select = select
 local type = type
 local GetSpellInfo = GetSpellInfo
 local UnitCreatureType = UnitCreatureType
 local CastSpellByName = CastSpellByName
 local string_format = string.format
+local string_lower = string.lower
 local GetTime = GetTime
 local UnitReaction = UnitReaction
+local strsplit = strsplit
+local strtrim = strtrim
 
 -- Define color codes
 local COLOR = {
     ORANGE = "|cFFFF8000",
-    YELLOW = "|cFFFFFF00"
+    YELLOW = "|cFFFFFF00",
+    RED = "|cFFFF0000"
 }
+
+local ADDON_PREFIX = "WTA"
+local ADDON_FULL_NAME = "WarmaneTrackingAid"
+local DEFAULT_ADDON_ENABLED = true
 
 -- Format general messages with prefix and optional value
 local function FormatMessage(prefix, msg, value)
@@ -25,6 +34,13 @@ local function FormatMessage(prefix, msg, value)
             formattedPrefix, COLOR.YELLOW, msg, COLOR.ORANGE, value)
     end
     return string_format("%s %s%s|r", formattedPrefix, COLOR.YELLOW, msg)
+end
+
+-- Format error messages with colored prefix and red body
+local function FormatErrorMessage(prefix, msg)
+    if type(prefix) ~= "string" or type(msg) ~= "string" then return "" end
+    return string_format("%s[%s] %sFailed to %s|r",
+        COLOR.ORANGE, prefix, COLOR.RED, msg)
 end
 
 -- Define tracking spells and their corresponding creature types
@@ -56,9 +72,33 @@ local WTA = CreateFrame("Frame")
 local playerClass = nil
 local lastCastTime = 0
 local lastKnownTracking = nil
+local trackingAidActive = false
 
 -- Global cooldown in seconds
 local GCD_DELAY = 1.5
+
+-- Create the saved settings table and populate validated defaults
+local function InitializeSavedData()
+    if type(WarmaneTrackingAidSettings) ~= "table" then
+        WarmaneTrackingAidSettings = {}
+    end
+
+    if type(WarmaneTrackingAidSettings.enabled) ~= "boolean" then
+        WarmaneTrackingAidSettings.enabled = DEFAULT_ADDON_ENABLED
+    end
+end
+
+-- Read the current persisted enabled state safely
+local function IsAddonEnabled()
+    InitializeSavedData()
+    return WarmaneTrackingAidSettings.enabled
+end
+
+-- Persist one validated enabled state
+local function SetSavedAddonEnabled(enabled)
+    InitializeSavedData()
+    WarmaneTrackingAidSettings.enabled = enabled and true or false
+end
 
 -- Function to get current active tracking
 local function GetActiveTracking()
@@ -68,27 +108,62 @@ local function GetActiveTracking()
     end
 end
 
--- Register both initial events
+-- Start tracking aid events for Hunter characters
+local function ActivateTrackingAid()
+    if trackingAidActive or playerClass ~= "HUNTER" or not IsAddonEnabled() then
+        return
+    end
+
+    lastKnownTracking = GetActiveTracking()
+    WTA:RegisterEvent("MINIMAP_UPDATE_TRACKING")
+    WTA:RegisterEvent("PLAYER_TARGET_CHANGED")
+    trackingAidActive = true
+end
+
+-- Stop tracking aid events and clear transient state
+local function DeactivateTrackingAid()
+    WTA:UnregisterEvent("MINIMAP_UPDATE_TRACKING")
+    WTA:UnregisterEvent("PLAYER_TARGET_CHANGED")
+    lastCastTime = 0
+    lastKnownTracking = nil
+    trackingAidActive = false
+end
+
+-- Apply activation state based on class and saved settings
+local function RefreshTrackingAidActivation()
+    if playerClass == "HUNTER" and IsAddonEnabled() then
+        ActivateTrackingAid()
+    else
+        DeactivateTrackingAid()
+    end
+end
+
+-- Register the initialization event; runtime events are enabled only while active
 WTA:RegisterEvent("ADDON_LOADED")
-WTA:RegisterEvent("MINIMAP_UPDATE_TRACKING")
 
 -- Main event handler
 WTA:SetScript("OnEvent", function(self, event, ...)
     if event == "ADDON_LOADED" and ... == addonName then
+        InitializeSavedData()
+
         -- Check if player is a hunter
         playerClass = select(2, UnitClass("player"))
         if playerClass ~= "HUNTER" then
-            self:UnregisterAllEvents()
+            DeactivateTrackingAid()
             return
         end
         
         -- Print loading message
-        print(FormatMessage("WTA", "WarmaneTrackingAid loaded"))
+        print(FormatMessage(ADDON_PREFIX, ADDON_FULL_NAME .. " loaded"))
+        RefreshTrackingAidActivation()
+        return
+    end
+
+    if not trackingAidActive then
+        return
+    end
         
-        -- Register target change event only for hunters
-        self:RegisterEvent("PLAYER_TARGET_CHANGED")
-        
-    elseif event == "MINIMAP_UPDATE_TRACKING" then
+    if event == "MINIMAP_UPDATE_TRACKING" then
         -- Update lastCastTime when tracking changes manually
         local currentTracking = GetActiveTracking()
         if currentTracking ~= lastKnownTracking then
@@ -118,16 +193,83 @@ WTA:SetScript("OnEvent", function(self, event, ...)
                         if icon then
                             -- Extract creature type name from spell (e.g. "Track Humanoids" -> "Humanoids")
                             local creatureTypeName = trackingSpell:gsub("Track ", "")
-                            print(FormatMessage("WTA", "Switched to track", creatureTypeName))
+                            print(FormatMessage(ADDON_PREFIX, "Switched to track", creatureTypeName))
                         end
                     else
                         -- Notify player about GCD cooldown
                         local remainingTime = GCD_DELAY - timeSinceLastCast
                         local timeText = string_format("%.1f seconds", remainingTime)
-                        print(FormatMessage("WTA", "You need to wait", timeText))
+                        print(FormatMessage(ADDON_PREFIX, "You need to wait", timeText))
                     end
                 end
             end
         end
     end
 end)
+
+-- Print help text listing available slash commands
+local function PrintHelp()
+    print(FormatMessage(ADDON_PREFIX, "Available commands:"))
+    print("  |cFFFF8000/wta |cFFFFFF00- Show this help|r")
+    print("  |cFFFF8000/wta on |cFFFFFF00- Enable Hunter tracking aid|r")
+    print("  |cFFFF8000/wta off |cFFFFFF00- Disable Hunter tracking aid|r")
+    print("  |cFFFF8000/wta help |cFFFFFF00- Show this help|r")
+end
+
+-- Enable or disable tracking aid without reloading the UI
+local function SetAddonEnabled(enabled)
+    local currentlyEnabled = IsAddonEnabled()
+    if currentlyEnabled == enabled then
+        print(FormatMessage(ADDON_PREFIX, string_format("%s is already %s.", ADDON_FULL_NAME, enabled and "enabled" or "disabled")))
+        return
+    end
+
+    SetSavedAddonEnabled(enabled)
+    RefreshTrackingAidActivation()
+    print(FormatMessage(ADDON_PREFIX, string_format("%s %s.", ADDON_FULL_NAME, enabled and "enabled" or "disabled")))
+end
+
+local function EnableAddon()
+    SetAddonEnabled(true)
+end
+
+local function DisableAddon()
+    SetAddonEnabled(false)
+end
+
+local SUBCOMMANDS = {
+    ["on"] = { handler = EnableAddon, args = 0 },
+    ["off"] = { handler = DisableAddon, args = 0 },
+    ["help"] = { handler = PrintHelp, args = 0 }
+}
+
+-- Register slash command parser following Blizzard pattern
+SLASH_WTA1 = "/wta"
+SlashCmdList["WTA"] = function(msg)
+    local rawMsg = strtrim(msg or "")
+    local normalizedMsg = string_lower(rawMsg)
+
+    if normalizedMsg == "" then
+        PrintHelp()
+        return
+    end
+
+    local subcommand = strsplit(" ", normalizedMsg, 2)
+    local command = SUBCOMMANDS[subcommand]
+    local _, rawArgs = strsplit(" ", rawMsg, 2)
+    rawArgs = strtrim(rawArgs or "")
+
+    if not command then
+        print(FormatErrorMessage(ADDON_PREFIX, string_format(
+            "find subcommand '%s'. Use /wta help to see available commands", subcommand)))
+        return
+    end
+
+    if command.args == 0 and rawArgs ~= "" then
+        print(FormatErrorMessage(ADDON_PREFIX, string_format(
+            "execute command. Wrong number of arguments for '%s' (expected %d)", subcommand, command.args)))
+        return
+    end
+
+    command.handler(rawArgs)
+end

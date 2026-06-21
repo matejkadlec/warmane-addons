@@ -38,6 +38,8 @@ local DEFAULT_MANA_THRESHOLD = 10
 local MIN_MANA_THRESHOLD = 5
 local MAX_MANA_THRESHOLD = 25
 local CHECK_INTERVAL = 0.5
+local ADDON_FULL_NAME = "WarmaneHealerMana"
+local DEFAULT_ADDON_ENABLED = true
 
 local frame = CreateFrame("Frame")
 local lastAlertAt = -DEFAULT_ALERT_DELAY
@@ -66,6 +68,10 @@ local function InitializeSavedData()
         HealerManaSettings = {}
     end
 
+    if type(HealerManaSettings.enabled) ~= "boolean" then
+        HealerManaSettings.enabled = DEFAULT_ADDON_ENABLED
+    end
+
     local savedDelay = HealerManaSettings.alertDelay
     if type(savedDelay) ~= "number" or
         savedDelay < MIN_ALERT_DELAY or
@@ -81,6 +87,18 @@ local function InitializeSavedData()
         savedThreshold ~= math_floor(savedThreshold) then
         HealerManaSettings.manaThreshold = DEFAULT_MANA_THRESHOLD
     end
+end
+
+-- Read the current persisted enabled state safely
+local function IsAddonEnabled()
+    InitializeSavedData()
+    return HealerManaSettings.enabled
+end
+
+-- Persist one validated enabled state
+local function SetSavedAddonEnabled(enabled)
+    InitializeSavedData()
+    HealerManaSettings.enabled = enabled and true or false
 end
 
 -- Read the current persisted delay safely
@@ -161,7 +179,7 @@ local function IsActiveDungeonInstance()
     return success and isInstance and instanceType == "party"
 end
 
--- Return whether the player is currently assigned as healer
+-- Return whether the player is currently assigned as a healer
 local function IsPlayerHealer()
     if type(UnitGroupRolesAssigned) ~= "function" then
         return false
@@ -210,6 +228,10 @@ end
 
 -- Check all activation conditions and send at most one alert per cooldown
 local function CheckLowManaAlert()
+    if not IsAddonEnabled() then
+        return
+    end
+
     local now = GetTime()
     if now - lastAlertAt < GetAlertDelay() then
         return
@@ -226,6 +248,8 @@ end
 -- Print slash command help text
 local function PrintHelp()
     print(FormatMessage(ADDON_PREFIX, "Available commands:"))
+    print("  |cFFFF8000/whm on |cFFFFFF00- Enable healer mana warnings|r")
+    print("  |cFFFF8000/whm off |cFFFFFF00- Disable healer mana warnings|r")
     print("  |cFFFF8000/whm help |cFFFFFF00- Show this help|r")
     print("  |cFFFF8000/whm delay |cFFFFFF00- Show the current warning delay|r")
     print("  |cFFFF8000/whm delay <seconds> |cFFFFFF00- Set the warning delay (30-180)|r")
@@ -330,7 +354,30 @@ local function HandleThreshold(args)
     print(FormatMessage(ADDON_PREFIX, "Mana threshold set to", threshold .. "%"))
 end
 
+-- Enable or disable healer mana warnings without reloading the UI
+local function SetAddonEnabled(enabled)
+    local currentlyEnabled = IsAddonEnabled()
+    if currentlyEnabled == enabled then
+        print(FormatMessage(ADDON_PREFIX, string_format("%s is already %s.", ADDON_FULL_NAME, enabled and "enabled" or "disabled")))
+        return
+    end
+
+    SetSavedAddonEnabled(enabled)
+    lastAlertAt = -GetAlertDelay()
+    print(FormatMessage(ADDON_PREFIX, string_format("%s %s.", ADDON_FULL_NAME, enabled and "enabled" or "disabled")))
+end
+
+local function EnableAddon()
+    SetAddonEnabled(true)
+end
+
+local function DisableAddon()
+    SetAddonEnabled(false)
+end
+
 local SUBCOMMANDS = {
+    ["on"] = { handler = EnableAddon, args = 0 },
+    ["off"] = { handler = DisableAddon, args = 0 },
     ["help"] = { handler = PrintHelp, args = 0 },
     ["delay"] = { handler = HandleDelay, args = 1 },
     ["threshold"] = { handler = HandleThreshold, args = 1 }

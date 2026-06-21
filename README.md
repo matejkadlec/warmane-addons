@@ -65,6 +65,7 @@ A big thanks goes to the owner of [`3.3.5-interface-files`](https://github.com/w
   - Export is intentionally in-client only: WoW 3.3.5a addons cannot write files to arbitrary paths like `C:\wit-export`
 - Slash commands:
   - `/wit` opens or closes the stats table
+  - `/wit on` and `/wit off` enable/disable instance tracking without reloading the UI
   - `/wit config` opens or closes the settings window
   - `/wit update` updates saved table rows with the current logged-in character's level
     - This does **not** update offline alts; WoW only exposes the current character's live level
@@ -88,6 +89,7 @@ A big thanks goes to the owner of [`3.3.5-interface-files`](https://github.com/w
 - Shows notifications at 30, 15, and 5 minutes before battle
 - Also shows notification right after the battle begins and ends
 - Slash commands `/wwr` and `/wwr when` check time until next battle
+- Slash commands `/wwr on` and `/wwr off` enable/disable automatic reminders without reloading the UI
 - Type `/wwr help` for a list of available commands
 
 > ℹ️ This AddOn is only activates if logged in as a level 80.
@@ -103,7 +105,8 @@ A big thanks goes to the owner of [`3.3.5-interface-files`](https://github.com/w
 - Does not intervene with item or quest links, usernames, etc.
 - Copying more messages makes them appear under eachother in the click order
 - Clear button to reset the copy window content
-- Slash command `/wcc` or `/wcc toggle` enables/disables copying persistently
+- Slash commands `/wcc on` and `/wcc off` enable/disable copying persistently without reloading the UI
+- Slash command `/wcc` shows help
 - Type `/wcc help` for a list of available commands
 
 ### WarmaneTrackingAid
@@ -114,12 +117,21 @@ A big thanks goes to the owner of [`3.3.5-interface-files`](https://github.com/w
 - Triggers only for neutral/hostile targets
 - GCD-aware to prevent false switching
 - Implemented to work with manual tracking switching as well
+- Slash commands `/wta on` and `/wta off` enable/disable tracking switching without reloading the UI
+- Type `/wta help` for a list of available commands
 
 > ℹ️ This AddOn only activates if logged in as a Hunter.
 
 ### WarmaneHealerMana
 
-for AI: create this section, should be similar to WarmaneHealerProtection below.
+💬 Warns your dungeon group when you are low on mana as the assigned healer.
+
+- Active only in 5-player dungeon instances
+- Uses the assigned healer role from Blizzard's dungeon role API
+- Sends `Healer Mana: I'm out of mana!` to group chat with a configurable 60-second default cooldown
+- Slash commands `/whm on` and `/whm off` enable/disable healer mana warnings without reloading the UI
+- Slash command `/whm delay <seconds>` changes the saved warning delay between 30 and 180 seconds
+- Slash command `/whm threshold <integer>` changes the saved mana threshold between 5% and 25%
 
 ### WarmaneHealerProtection
 
@@ -128,6 +140,7 @@ for AI: create this section, should be similar to WarmaneHealerProtection below.
 - Active only in 5-player dungeon instances
 - Uses the assigned healer role from Blizzard's dungeon role API
 - Sends `Healer Protection: I have aggro!` to group chat with a configurable 15-second default cooldown
+- Slash commands `/whp on` and `/whp off` enable/disable healer protection warnings without reloading the UI
 - Slash command `/whp` shows help and `/whp delay <seconds>` changes the saved warning delay between 5 and 120 seconds
 - Checks visible hostile targets and recent combat-log hits to detect mobs attacking you
 
@@ -138,6 +151,8 @@ for AI: create this section, should be similar to WarmaneHealerProtection below.
 - This _should be_ WoW's default behvaior, but I've been having problems with it on Warmane
 - Uses Blizzard's built-in `autoClearAFK` option to keep behavior safe and lightweight
 - Re-enables AFK auto-clear when the AddOn loads and when entering the world
+- Slash commands `/wna on` and `/wna off` enable/disable AFK auto-clear without reloading the UI
+- Type `/wna help` for a list of available commands
 - No key listener, no polling loop, and no manual `/afk` simulation
 
 ## 🧩 Backported AddOns

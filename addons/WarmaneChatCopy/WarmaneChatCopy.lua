@@ -22,6 +22,7 @@ local COLOR = {
 }
 
 local ADDON_PREFIX = "WCC"
+local ADDON_FULL_NAME = "WarmaneChatCopy"
 local DEFAULT_COPY_ENABLED = true
 
 -- Format general messages with prefix and optional value
@@ -250,28 +251,44 @@ end
 -- Print help text listing available slash commands
 local function PrintHelp()
     print(FormatMessage(ADDON_PREFIX, "Available commands:"))
-    print("  |cFFFF8000/wcc |cFFFFFF00- Toggle chat copy on or off|r")
-    print("  |cFFFF8000/wcc toggle |cFFFFFF00- Toggle chat copy on or off|r")
+    print("  |cFFFF8000/wcc |cFFFFFF00- Show this help|r")
+    print("  |cFFFF8000/wcc on |cFFFFFF00- Enable chat copy|r")
+    print("  |cFFFF8000/wcc off |cFFFFFF00- Disable chat copy|r")
     print("  |cFFFF8000/wcc help |cFFFFFF00- Show this help|r")
 end
 
--- Handle /wcc and /wcc toggle
-local function ToggleCopy()
-    SetCopyEnabled(not IsCopyEnabled())
+-- Enable or disable chat copy without reloading the UI
+local function SetAddonEnabled(enabled)
+    local currentlyEnabled = IsCopyEnabled()
+    if currentlyEnabled == enabled then
+        print(FormatMessage(ADDON_PREFIX, string_format("%s is already %s.", ADDON_FULL_NAME, enabled and "enabled" or "disabled")))
+        return
+    end
+
+    SetCopyEnabled(enabled)
 
     if not IsCopyEnabled() and copyFrame and copyFrame:IsShown() then
         copyFrame:Hide()
     end
 
     if IsCopyEnabled() then
-        print(FormatMessage(ADDON_PREFIX, "Chat copy enabled"))
+        print(FormatMessage(ADDON_PREFIX, ADDON_FULL_NAME .. " enabled."))
     else
-        print(FormatMessage(ADDON_PREFIX, "Chat copy disabled"))
+        print(FormatMessage(ADDON_PREFIX, ADDON_FULL_NAME .. " disabled."))
     end
 end
 
+local function EnableAddon()
+    SetAddonEnabled(true)
+end
+
+local function DisableAddon()
+    SetAddonEnabled(false)
+end
+
 local SUBCOMMANDS = {
-    ["toggle"] = { handler = ToggleCopy, args = 0 },
+    ["on"] = { handler = EnableAddon, args = 0 },
+    ["off"] = { handler = DisableAddon, args = 0 },
     ["help"] = { handler = PrintHelp, args = 0 }
 }
 
@@ -282,7 +299,7 @@ SlashCmdList["WCC"] = function(msg)
     local normalizedMsg = string_lower(rawMsg)
 
     if normalizedMsg == "" then
-        ToggleCopy()
+        PrintHelp()
         return
     end
 
