@@ -6,7 +6,7 @@ addon.DUNGEON_FINAL_BOSSES = {
     --                              Classic Dungeons                            --
     --==========================================================================--
     -- Ragefire Chasm
-    [11519] = "Ragefire Chasm", -- Bazzalan
+    [11520] = "Ragefire Chasm", -- Taragaman the Hungerer
     -- Deadmines
     [639] = "The Deadmines", -- Edwin VanCleef
     -- Wailing Caverns
@@ -204,7 +204,7 @@ addon.DUNGEON_DEBUG_BOSSES[1663] = true -- Dextren Ward
 -- Ragefire Chasm
 addon.DUNGEON_DEBUG_BOSSES[11517] = true -- Oggleflint
 addon.DUNGEON_DEBUG_BOSSES[11518] = true -- Jergosh the Invoker
-addon.DUNGEON_DEBUG_BOSSES[11520] = true -- Taragaman the Hungerer
+addon.DUNGEON_DEBUG_BOSSES[11519] = true -- Bazzalan
 -- The Deadmines
 addon.DUNGEON_DEBUG_BOSSES[644] = true -- Rhahk'Zor
 addon.DUNGEON_DEBUG_BOSSES[643] = true -- Sneed
