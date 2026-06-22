@@ -17,13 +17,23 @@ local slashCommands = addon.slashCommands
 local statsTableUI = nil
 local configFrameUI = nil
 local exportDialogUI = nil
+local interfaceOptionsUI = nil
+
+local ADDON_FULL_NAME = "WarmaneInstanceTracker"
 
 -- Forward declare helpers used across UI callbacks
 local ToggleConfigFrame
 local ToggleStatsTable
+local OpenStatsTable
+local ExportStatsTable
+local OpenInterfaceOptions
 local RefreshConfigCheckboxes
 local RefreshStatsTableIfOpen
 local UpdateSpecialFrameEscOrder
+local SetInstanceTrackingWithMessage
+local SetPartyMessageWithMessage
+local SetDebugPrintingWithMessage
+local SetDebugLoggingWithMessage
 
 -- Keep Esc behavior classic by delegating ordering to the dedicated UI module
 UpdateSpecialFrameEscOrder = function()
@@ -37,6 +47,48 @@ UpdateSpecialFrameEscOrder = function()
     uiSpecialFrames.UpdateEscOrder(statsShown, configShown, exportShown)
 end
 
+-- Toggle instance tracking and print the same messages used by /wit on and /wit off
+SetInstanceTrackingWithMessage = function(enabled)
+    local currentlyEnabled = type(runTracker.IsInstanceTrackingEnabled) == "function" and runTracker.IsInstanceTrackingEnabled()
+    if currentlyEnabled == enabled then
+        print(common.Message("WIT", ADDON_FULL_NAME .. " is already " .. (enabled and "enabled" or "disabled") .. "."))
+        return
+    end
+
+    runTracker.SetInstanceTrackingEnabled(enabled)
+    print(common.Message("WIT", ADDON_FULL_NAME .. " " .. (enabled and "enabled" or "disabled") .. "."))
+end
+
+-- Toggle party completion messages with user-facing chat feedback
+SetPartyMessageWithMessage = function(enabled)
+    if type(runTracker.IsPartyMessageEnabled) == "function" and runTracker.IsPartyMessageEnabled() == enabled then
+        return
+    end
+
+    runTracker.SetPartyMessageEnabled(enabled)
+    print(common.Message("WIT", "Party message", enabled and "enabled." or "disabled."))
+end
+
+-- Toggle boss/combat debug printing with user-facing chat feedback
+SetDebugPrintingWithMessage = function(enabled)
+    if type(runTracker.IsDebugPrintingEnabled) == "function" and runTracker.IsDebugPrintingEnabled() == enabled then
+        return
+    end
+
+    runTracker.SetDebugPrintingEnabled(enabled)
+    print(common.Message("WIT", "Debug printing", enabled and "enabled." or "disabled."))
+end
+
+-- Toggle persisted debug logging with user-facing chat feedback
+SetDebugLoggingWithMessage = function(enabled)
+    if type(runTracker.IsDebugLoggingEnabled) == "function" and runTracker.IsDebugLoggingEnabled() == enabled then
+        return
+    end
+
+    runTracker.SetDebugLoggingEnabled(enabled)
+    print(common.Message("WIT", "Debug logging", enabled and "enabled." or "disabled."))
+end
+
 -- Build UI controllers once and inject callbacks back into tracker logic
 local function EnsureUIControllers()
     if not configFrameUI and type(ui.CreateConfigFrame) == "function" then
@@ -44,18 +96,10 @@ local function EnsureUIControllers()
             getState = function()
                 return runTracker.GetSettingsState()
             end,
-            onSetInstanceTracking = function(enabled)
-                runTracker.SetInstanceTrackingEnabled(enabled)
-            end,
-            onSetPartyMessage = function(enabled)
-                runTracker.SetPartyMessageEnabled(enabled)
-            end,
-            onSetDebugPrinting = function(enabled)
-                runTracker.SetDebugPrintingEnabled(enabled)
-            end,
-            onSetDebugLogging = function(enabled)
-                runTracker.SetDebugLoggingEnabled(enabled)
-            end,
+            onSetInstanceTracking = SetInstanceTrackingWithMessage,
+            onSetPartyMessage = SetPartyMessageWithMessage,
+            onSetDebugPrinting = SetDebugPrintingWithMessage,
+            onSetDebugLogging = SetDebugLoggingWithMessage,
             onVisibilityChanged = UpdateSpecialFrameEscOrder
         })
     end
@@ -69,8 +113,8 @@ local function EnsureUIControllers()
     if not statsTableUI and type(ui.CreateStatsTable) == "function" then
         statsTableUI = ui.CreateStatsTable({
             toggleConfig = function()
-                if ToggleConfigFrame then
-                    ToggleConfigFrame()
+                if OpenInterfaceOptions then
+                    OpenInterfaceOptions()
                 end
             end,
             onExport = function(csvText)
@@ -82,14 +126,61 @@ local function EnsureUIControllers()
             onVisibilityChanged = UpdateSpecialFrameEscOrder
         })
     end
+
+    if not interfaceOptionsUI and type(ui.CreateInterfaceOptions) == "function" then
+        interfaceOptionsUI = ui.CreateInterfaceOptions({
+            getState = function()
+                return runTracker.GetSettingsState()
+            end,
+            getRunControlState = function()
+                return runTracker.GetRunControlState()
+            end,
+            openStatsTable = OpenStatsTable,
+            exportStatsTable = ExportStatsTable,
+            printStatus = function()
+                runTracker.PrintStatus()
+            end,
+            startRun = function()
+                runTracker.StartManual()
+            end,
+            endRun = function()
+                runTracker.EndManual(false)
+            end,
+            pauseRun = function()
+                runTracker.PauseManual()
+            end,
+            continueRun = function()
+                runTracker.ContinueManual()
+            end,
+            resetRun = function()
+                runTracker.ResetManual()
+            end,
+            onSetInstanceTracking = SetInstanceTrackingWithMessage,
+            onSetPartyMessage = SetPartyMessageWithMessage,
+            onSetDebugPrinting = SetDebugPrintingWithMessage,
+            onSetDebugLogging = SetDebugLoggingWithMessage,
+            onSetStatsCharacterFilterMode = function(mode)
+                runTracker.SetStatsCharacterFilterMode(mode)
+            end,
+            onSetStatsLevelRange = function(levelRange)
+                runTracker.SetStatsLevelRange(levelRange)
+            end,
+            onSetStatsTableScale = function(scalePercent)
+                runTracker.SetStatsTableScale(scalePercent)
+            end
+        })
+    end
 end
 
 -- Sync config checkboxes with current persisted settings
 RefreshConfigCheckboxes = function()
-    if not configFrameUI or not configFrameUI.RefreshCheckboxes then
-        return
+    if configFrameUI and configFrameUI.RefreshCheckboxes then
+        configFrameUI.RefreshCheckboxes()
     end
-    configFrameUI.RefreshCheckboxes()
+
+    if interfaceOptionsUI and interfaceOptionsUI.RefreshCheckboxes then
+        interfaceOptionsUI.RefreshCheckboxes()
+    end
 end
 
 -- Refresh stats table when visible so completion/debug writes reflect immediately
@@ -110,11 +201,35 @@ ToggleConfigFrame = function()
     end
 end
 
+-- Open the run statistics table
+OpenStatsTable = function()
+    EnsureUIControllers()
+    if statsTableUI and statsTableUI.Show then
+        statsTableUI.Show()
+    end
+end
+
 -- Toggle table window visibility for slash command usage
 ToggleStatsTable = function()
     EnsureUIControllers()
     if statsTableUI and statsTableUI.Toggle then
         statsTableUI.Toggle()
+    end
+end
+
+-- Export run statistics using the same path as the table Export button
+ExportStatsTable = function()
+    EnsureUIControllers()
+    if statsTableUI and statsTableUI.Export then
+        statsTableUI.Export()
+    end
+end
+
+-- Open WIT inside the Blizzard Interface Options AddOns tab
+OpenInterfaceOptions = function()
+    EnsureUIControllers()
+    if interfaceOptionsUI and interfaceOptionsUI.Open then
+        interfaceOptionsUI.Open()
     end
 end
 
@@ -136,8 +251,14 @@ runTracker.SetCallbacks({
 })
 
 slashCommands.Register({
-    toggleConfig = ToggleConfigFrame,
-    toggleStatsTable = ToggleStatsTable
+    toggleConfig = OpenInterfaceOptions,
+    toggleStatsTable = ToggleStatsTable,
+    enableAddon = function()
+        SetInstanceTrackingWithMessage(true)
+    end,
+    disableAddon = function()
+        SetInstanceTrackingWithMessage(false)
+    end
 })
 
 -- Register events needed for tracking
@@ -167,6 +288,7 @@ WIT:SetScript("OnEvent", function(self, event, ...)
         end
 
         runTracker.LoadSettingsFromSavedData()
+        EnsureUIControllers()
         print(common.Message("WIT", "WarmaneInstanceTracker loaded"))
         return
     end

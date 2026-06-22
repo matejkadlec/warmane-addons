@@ -12,6 +12,8 @@ local string_find = string.find
 local string_gsub = string.gsub
 local string_lower = string.lower
 local strtrim = strtrim
+local UnitName = UnitName
+local UnitLevel = UnitLevel
 
 addon.ui = addon.ui or {}
 
@@ -62,6 +64,19 @@ addon.ui.CreateStatsTable = function(options)
     local instanceLevelRangesByName = nil
     local configuredLevelRanges = addon.DUNGEON_LEVEL_RANGES or {}
     local displayNameAliases = addon.DUNGEON_INSTANCE_NAME_ALIASES or {}
+
+    local function ApplyStatsFrameScale()
+        if not statsFrame or not utils or type(utils.GetStatsTableScale) ~= "function" then
+            return
+        end
+
+        local scalePercent = utils.GetStatsTableScale()
+        if type(scalePercent) ~= "number" then
+            scalePercent = 100
+        end
+
+        statsFrame:SetScale(scalePercent / 100)
+    end
 
     local function BuildInstanceLevelRanges()
         local ranges = {}
@@ -133,6 +148,23 @@ addon.ui.CreateStatsTable = function(options)
         end
 
         return string_format("%s (%d - %d)", displayName, minLevel, maxLevel)
+    end
+
+    local function GetInstanceLevelRange(rawName)
+        if type(rawName) ~= "string" or rawName == "" then
+            return nil
+        end
+
+        local displayName = displayNameAliases[rawName] or rawName
+
+        if type(instanceLevelRangesByName) ~= "table" then
+            instanceLevelRangesByName = BuildInstanceLevelRanges()
+        end
+
+        return instanceLevelRangesByName[displayName]
+            or instanceLevelRangesByName[rawName]
+            or configuredLevelRanges[displayName]
+            or configuredLevelRanges[rawName]
     end
 
     local function FormatNumberWithCommas(number)
@@ -311,6 +343,39 @@ addon.ui.CreateStatsTable = function(options)
         return string_find(BuildSearchText(data), searchText, 1, true) ~= nil
     end
 
+    local function RowMatchesLevelRange(data)
+        if not utils or type(utils.GetStatsLevelRange) ~= "function" then
+            return true
+        end
+
+        local levelRange = utils.GetStatsLevelRange()
+        if type(levelRange) ~= "number" or levelRange <= 0 then
+            return true
+        end
+
+        if type(data) ~= "table" then
+            return true
+        end
+
+        local instanceRange = GetInstanceLevelRange(data.instanceName)
+        if type(instanceRange) ~= "table" or
+            type(instanceRange.minLevel) ~= "number" or
+            type(instanceRange.maxLevel) ~= "number" then
+            return true
+        end
+
+        local characterLevel = type(UnitLevel) == "function" and UnitLevel("player") or nil
+        if type(characterLevel) ~= "number" or characterLevel <= 0 then
+            characterLevel = type(data) == "table" and data.characterLevel or nil
+        end
+        if type(characterLevel) ~= "number" then
+            return true
+        end
+
+        return instanceRange.maxLevel >= characterLevel - levelRange
+            and instanceRange.minLevel <= characterLevel + levelRange
+    end
+
     local function ResetScrollOffset()
         if statsScrollFrame and type(FauxScrollFrame_SetOffset) == "function" then
             FauxScrollFrame_SetOffset(statsScrollFrame, 0)
@@ -370,7 +435,7 @@ addon.ui.CreateStatsTable = function(options)
         statsRowsData = {}
 
         for _, row in ipairs(allStatsRows) do
-            if RowMatchesCharacter(row) and RowMatchesSearch(row) then
+            if RowMatchesCharacter(row) and RowMatchesSearch(row) and RowMatchesLevelRange(row) then
                 statsRowsData[#statsRowsData + 1] = row
             end
         end
@@ -407,6 +472,22 @@ addon.ui.CreateStatsTable = function(options)
         UIDropDownMenu_SetText(characterDropdown, string_format("%d selected", selectedCharacterCount))
     end
 
+    local function ApplyCharacterFilterSetting()
+        selectedCharacters = {}
+        selectedCharacterCount = 0
+
+        if utils and type(utils.GetStatsCharacterFilterMode) == "function" and
+            utils.GetStatsCharacterFilterMode() == "current" then
+            local currentCharacter = type(UnitName) == "function" and UnitName("player") or nil
+            if type(currentCharacter) == "string" and currentCharacter ~= "" then
+                selectedCharacters[currentCharacter] = true
+                selectedCharacterCount = 1
+            end
+        end
+
+        UpdateCharacterDropdownText()
+    end
+
     local function RefreshCharacterOptions()
         local seen = {}
         characterOptions = {}
@@ -420,16 +501,7 @@ addon.ui.CreateStatsTable = function(options)
 
         table_sort(characterOptions)
 
-        selectedCharacterCount = 0
-        for characterName, selected in pairs(selectedCharacters) do
-            if selected and seen[characterName] then
-                selectedCharacterCount = selectedCharacterCount + 1
-            else
-                selectedCharacters[characterName] = nil
-            end
-        end
-
-        UpdateCharacterDropdownText()
+        ApplyCharacterFilterSetting()
     end
 
     local function ToggleCharacterSelection(characterName)
@@ -543,6 +615,7 @@ addon.ui.CreateStatsTable = function(options)
         end
 
         allStatsRows = utils.GetAllInstanceStatsRows()
+        ApplyStatsFrameScale()
         RefreshCharacterOptions()
         ApplyFiltersAndSort(false)
     end
@@ -730,12 +803,25 @@ addon.ui.CreateStatsTable = function(options)
     end
 
     return {
+        Show = function()
+            CreateFrameIfNeeded()
+            ApplyStatsFrameScale()
+            statsFrame:Show()
+        end,
         Toggle = function()
             CreateFrameIfNeeded()
             if statsFrame:IsShown() then
                 statsFrame:Hide()
             else
+                ApplyStatsFrameScale()
                 statsFrame:Show()
+            end
+        end,
+        Export = function()
+            CreateFrameIfNeeded()
+            Refresh()
+            if type(options.onExport) == "function" then
+                options.onExport(BuildExportCSV())
             end
         end,
         Refresh = function()

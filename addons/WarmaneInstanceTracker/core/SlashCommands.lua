@@ -21,7 +21,7 @@ local function PrintHelp()
     print("  |cFFFF8000/wit |cFFFFFF00- Open or close the stats table|r")
     print("  |cFFFF8000/wit on |cFFFFFF00- Enable instance tracking|r")
     print("  |cFFFF8000/wit off |cFFFFFF00- Disable instance tracking|r")
-    print("  |cFFFF8000/wit config |cFFFFFF00- Open or close the settings window|r")
+    print("  |cFFFF8000/wit config |cFFFFFF00- Open settings in Interface Options|r")
     print("  |cFFFF8000/wit status |cFFFFFF00- Show current tracking state|r")
     print("  |cFFFF8000/wit update |cFFFFFF00- Update saved rows with this character's current level|r")
     print("  |cFFFF8000/wit start |cFFFFFF00- Start tracking the current instance|r")
@@ -259,8 +259,8 @@ end
 -- Define available slash subcommands and aliases
 local function BuildSubcommands(options)
     return {
-        ["on"] = { handler = EnableAddon, args = 0 },
-        ["off"] = { handler = DisableAddon, args = 0 },
+        ["on"] = { handler = type(options.enableAddon) == "function" and options.enableAddon or EnableAddon, args = 0 },
+        ["off"] = { handler = type(options.disableAddon) == "function" and options.disableAddon or DisableAddon, args = 0 },
         ["config"] = { handler = options.toggleConfig, args = 0 },
         ["debug"] = { handler = HandleDebug },
         ["help"] = { handler = PrintHelp, args = 0 },

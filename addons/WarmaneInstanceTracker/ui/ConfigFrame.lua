@@ -87,7 +87,7 @@ addon.ui.CreateConfigFrame = function(options)
 
         local userTracking = CreateFrame("CheckButton", "WITConfigEnableInstanceTracking", configFrame, "InterfaceOptionsCheckButtonTemplate")
         userTracking:SetPoint("TOPLEFT", configFrame, "TOPLEFT", 14, -66)
-        getglobal(userTracking:GetName() .. "Text"):SetText("Enable instance tracking")
+        getglobal(userTracking:GetName() .. "Text"):SetText("Enable instance tracker")
         userTracking:SetScript("OnClick", function(self)
             if type(options.onSetInstanceTracking) == "function" then
                 options.onSetInstanceTracking(self:GetChecked() and true or false)

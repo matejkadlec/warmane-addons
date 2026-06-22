@@ -4,6 +4,7 @@ local originalSetItemRef
 
 -- Cache frequently used functions
 local gsub = gsub
+local getglobal = getglobal
 local print = print
 local string_format = string.format
 local string_lower = string.lower
@@ -24,6 +25,11 @@ local COLOR = {
 local ADDON_PREFIX = "WCC"
 local ADDON_FULL_NAME = "WarmaneChatCopy"
 local DEFAULT_COPY_ENABLED = true
+local PARENT_CATEGORY_NAME = "Warmane AddOns"
+local PARENT_PANEL_NAME = "WarmaneAddOnsInterfaceOptionsPanel"
+
+local interfaceOptionsPanel = nil
+local interfaceOptionsCheckbox = nil
 
 -- Format general messages with prefix and optional value
 local function FormatMessage(prefix, msg, value)
@@ -248,6 +254,41 @@ function HandleItemRef(link, text, button, chatFrame)
     originalSetItemRef(link, text, button, chatFrame)
 end
 
+local function EnsureWarmaneAddOnsCategory(defaultOpenFunc)
+    local parentPanel = getglobal(PARENT_PANEL_NAME)
+    if not parentPanel then
+        parentPanel = CreateFrame("Frame", PARENT_PANEL_NAME)
+        parentPanel.name = PARENT_CATEGORY_NAME
+
+        local title = parentPanel:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
+        title:SetPoint("TOPLEFT", parentPanel, "TOPLEFT", 16, -16)
+        title:SetText(PARENT_CATEGORY_NAME)
+
+        parentPanel:SetScript("OnShow", function(self)
+            if self.warmaneRedirecting or type(self.warmaneOpenDefaultChild) ~= "function" then
+                return
+            end
+
+            self.warmaneRedirecting = true
+            self.warmaneOpenDefaultChild()
+            self.warmaneRedirecting = false
+        end)
+
+        parentPanel:Hide()
+        InterfaceOptions_AddCategory(parentPanel)
+    end
+
+    if type(parentPanel.warmaneOpenDefaultChild) ~= "function" then
+        parentPanel.warmaneOpenDefaultChild = defaultOpenFunc
+    end
+end
+
+local function RefreshInterfaceOptions()
+    if interfaceOptionsCheckbox then
+        interfaceOptionsCheckbox:SetChecked(IsCopyEnabled())
+    end
+end
+
 -- Print help text listing available slash commands
 local function PrintHelp()
     print(FormatMessage(ADDON_PREFIX, "Available commands:"))
@@ -276,6 +317,8 @@ local function SetAddonEnabled(enabled)
     else
         print(FormatMessage(ADDON_PREFIX, ADDON_FULL_NAME .. " disabled."))
     end
+
+    RefreshInterfaceOptions()
 end
 
 local function EnableAddon()
@@ -322,6 +365,42 @@ SlashCmdList["WCC"] = function(msg)
 
     command.handler(rawArgs)
 end
+
+local function RegisterInterfaceOptions()
+    local function OpenPanel()
+        if interfaceOptionsPanel and type(InterfaceOptionsFrame_OpenToCategory) == "function" then
+            InterfaceOptionsFrame_OpenToCategory(interfaceOptionsPanel)
+        end
+    end
+
+    EnsureWarmaneAddOnsCategory(OpenPanel)
+
+    interfaceOptionsPanel = CreateFrame("Frame", "WCCInterfaceOptionsPanel")
+    interfaceOptionsPanel.name = "Chat Copy"
+    interfaceOptionsPanel.parent = PARENT_CATEGORY_NAME
+
+    local title = interfaceOptionsPanel:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
+    title:SetPoint("TOPLEFT", interfaceOptionsPanel, "TOPLEFT", 16, -16)
+    title:SetText("Warmane Chat Copy")
+
+    local header = interfaceOptionsPanel:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+    header:SetPoint("TOPLEFT", interfaceOptionsPanel, "TOPLEFT", 18, -52)
+    header:SetText("User settings")
+
+    interfaceOptionsCheckbox = CreateFrame("CheckButton", "WCCInterfaceOptionsEnabled", interfaceOptionsPanel, "InterfaceOptionsCheckButtonTemplate")
+    interfaceOptionsCheckbox:SetPoint("TOPLEFT", interfaceOptionsPanel, "TOPLEFT", 14, -76)
+    getglobal(interfaceOptionsCheckbox:GetName() .. "Text"):SetText("Enable chat copy")
+    interfaceOptionsCheckbox:SetScript("OnClick", function(self)
+        SetAddonEnabled(self:GetChecked() and true or false)
+    end)
+
+    interfaceOptionsPanel:SetScript("OnShow", RefreshInterfaceOptions)
+    interfaceOptionsPanel.refresh = RefreshInterfaceOptions
+    interfaceOptionsPanel:Hide()
+    InterfaceOptions_AddCategory(interfaceOptionsPanel)
+end
+
+RegisterInterfaceOptions()
 
 -- Print loading message
 print(FormatMessage(ADDON_PREFIX, "WarmaneChatCopy loaded"))

@@ -1278,7 +1278,21 @@ function runTracker.GetSettingsState()
         instanceTrackingEnabled = instanceTrackingEnabled,
         partyMessageEnabled = partyMessageEnabled,
         debugMode = debugMode,
-        debugLoggingEnabled = debugLoggingEnabled
+        debugLoggingEnabled = debugLoggingEnabled,
+        statsCharacterFilterMode = utils.GetStatsCharacterFilterMode(),
+        statsLevelRange = utils.GetStatsLevelRange(),
+        statsTableScale = utils.GetStatsTableScale()
+    }
+end
+
+-- Return current run state for Interface Options controls
+function runTracker.GetRunControlState()
+    local hasRun = HasTrackedRun()
+    return {
+        hasRun = hasRun,
+        isPaused = state == STATE_PAUSED,
+        instanceName = hasRun and instanceName or "",
+        elapsedSeconds = hasRun and GetElapsedSeconds() or 0
     }
 end
 
@@ -1307,6 +1321,33 @@ end
 function runTracker.SetPartyMessageEnabled(enabled)
     partyMessageEnabled = enabled and true or false
     utils.SetPartyMessageEnabled(partyMessageEnabled)
+    RefreshConfigCheckboxes()
+end
+
+-- Return whether party completion messages are enabled
+function runTracker.IsPartyMessageEnabled()
+    return partyMessageEnabled
+end
+
+-- Set the default table character scope
+function runTracker.SetStatsCharacterFilterMode(mode)
+    utils.SetStatsCharacterFilterMode(mode)
+    RefreshStatsTableIfOpen()
+    RefreshConfigCheckboxes()
+end
+
+-- Set the table level-range filter
+function runTracker.SetStatsLevelRange(levelRange)
+    utils.SetStatsLevelRange(levelRange)
+    RefreshStatsTableIfOpen()
+    RefreshConfigCheckboxes()
+end
+
+-- Set the run statistics table scale percentage
+function runTracker.SetStatsTableScale(scalePercent)
+    utils.SetStatsTableScale(scalePercent)
+    RefreshStatsTableIfOpen()
+    RefreshConfigCheckboxes()
 end
 
 -- Toggle boss/combat debug printing
@@ -1314,6 +1355,11 @@ function runTracker.SetDebugPrintingEnabled(enabled)
     debugMode = enabled and true or false
     utils.SetDebugPrintingEnabled(debugMode)
     RefreshConfigCheckboxes()
+end
+
+-- Return whether boss/combat debug printing is enabled
+function runTracker.IsDebugPrintingEnabled()
+    return debugMode
 end
 
 -- Toggle persisted death-log capture

@@ -22,8 +22,27 @@ local DEFAULT_SETTINGS = {
     enableInstanceTracking = true,
     enablePartyMessage = true,
     enableDebugPrinting = false,
-    enableDebugLogging = false
+    enableDebugLogging = false,
+    statsCharacterFilterMode = "current",
+    statsLevelRange = 0,
+    statsTableScale = 100
 }
+
+local VALID_STATS_CHARACTER_FILTER_MODES = {
+    current = true,
+    all = true
+}
+
+local VALID_STATS_LEVEL_RANGES = {
+    [0] = true,
+    [5] = true,
+    [10] = true,
+    [15] = true,
+    [20] = true
+}
+
+local MIN_STATS_TABLE_SCALE = 50
+local MAX_STATS_TABLE_SCALE = 150
 
 -- Validate string values used in run/stat records
 local function IsValidText(value)
@@ -63,9 +82,23 @@ end
 -- Apply default values for user/developer settings
 local function EnsureDefaultSettings()
     for key, defaultValue in pairs(DEFAULT_SETTINGS) do
-        if type(SettingsData[key]) ~= "boolean" then
+        if type(defaultValue) == "boolean" and type(SettingsData[key]) ~= "boolean" then
             SettingsData[key] = defaultValue
         end
+    end
+
+    if not VALID_STATS_CHARACTER_FILTER_MODES[SettingsData.statsCharacterFilterMode] then
+        SettingsData.statsCharacterFilterMode = DEFAULT_SETTINGS.statsCharacterFilterMode
+    end
+
+    if not VALID_STATS_LEVEL_RANGES[SettingsData.statsLevelRange] then
+        SettingsData.statsLevelRange = DEFAULT_SETTINGS.statsLevelRange
+    end
+
+    if type(SettingsData.statsTableScale) ~= "number" or
+        SettingsData.statsTableScale < MIN_STATS_TABLE_SCALE or
+        SettingsData.statsTableScale > MAX_STATS_TABLE_SCALE then
+        SettingsData.statsTableScale = DEFAULT_SETTINGS.statsTableScale
     end
 end
 
@@ -552,6 +585,55 @@ addon.utils = {
             SettingsData = {}
         end
         SettingsData.enablePartyMessage = enabled == true
+    end,
+
+    GetStatsCharacterFilterMode = function()
+        if type(SettingsData) ~= "table" or not VALID_STATS_CHARACTER_FILTER_MODES[SettingsData.statsCharacterFilterMode] then
+            return DEFAULT_SETTINGS.statsCharacterFilterMode
+        end
+        return SettingsData.statsCharacterFilterMode
+    end,
+
+    SetStatsCharacterFilterMode = function(mode)
+        if type(SettingsData) ~= "table" then
+            SettingsData = {}
+        end
+        SettingsData.statsCharacterFilterMode = VALID_STATS_CHARACTER_FILTER_MODES[mode] and mode or DEFAULT_SETTINGS.statsCharacterFilterMode
+    end,
+
+    GetStatsLevelRange = function()
+        if type(SettingsData) ~= "table" or not VALID_STATS_LEVEL_RANGES[SettingsData.statsLevelRange] then
+            return DEFAULT_SETTINGS.statsLevelRange
+        end
+        return SettingsData.statsLevelRange
+    end,
+
+    SetStatsLevelRange = function(levelRange)
+        if type(SettingsData) ~= "table" then
+            SettingsData = {}
+        end
+        SettingsData.statsLevelRange = VALID_STATS_LEVEL_RANGES[levelRange] and levelRange or DEFAULT_SETTINGS.statsLevelRange
+    end,
+
+    GetStatsTableScale = function()
+        if type(SettingsData) ~= "table" or type(SettingsData.statsTableScale) ~= "number" then
+            return DEFAULT_SETTINGS.statsTableScale
+        end
+        if SettingsData.statsTableScale < MIN_STATS_TABLE_SCALE or SettingsData.statsTableScale > MAX_STATS_TABLE_SCALE then
+            return DEFAULT_SETTINGS.statsTableScale
+        end
+        return SettingsData.statsTableScale
+    end,
+
+    SetStatsTableScale = function(scalePercent)
+        if type(SettingsData) ~= "table" then
+            SettingsData = {}
+        end
+        if type(scalePercent) ~= "number" or scalePercent < MIN_STATS_TABLE_SCALE or scalePercent > MAX_STATS_TABLE_SCALE then
+            SettingsData.statsTableScale = DEFAULT_SETTINGS.statsTableScale
+            return
+        end
+        SettingsData.statsTableScale = scalePercent
     end,
 
     -- Developer settings getters/setters

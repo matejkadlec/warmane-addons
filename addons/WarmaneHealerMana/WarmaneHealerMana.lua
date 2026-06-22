@@ -1,6 +1,7 @@
 local addonName, addon = ...
 
 -- Cache frequently used functions
+local getglobal = getglobal
 local print = print
 local pcall = pcall
 local tonumber = tonumber
@@ -40,9 +41,20 @@ local MAX_MANA_THRESHOLD = 25
 local CHECK_INTERVAL = 0.5
 local ADDON_FULL_NAME = "WarmaneHealerMana"
 local DEFAULT_ADDON_ENABLED = true
+local PARENT_CATEGORY_NAME = "Warmane AddOns"
+local PARENT_PANEL_NAME = "WarmaneAddOnsInterfaceOptionsPanel"
 
 local frame = CreateFrame("Frame")
 local lastAlertAt = -DEFAULT_ALERT_DELAY
+local interfaceOptionsPanel = nil
+local interfaceOptionsCheckbox = nil
+local delaySlider = nil
+local delayValueText = nil
+local thresholdSlider = nil
+local thresholdValueText = nil
+local refreshingInterfaceOptions = false
+
+local RefreshInterfaceOptions
 
 -- Format general messages with prefix and optional value
 local function FormatMessage(prefix, msg, value)
@@ -365,6 +377,10 @@ local function SetAddonEnabled(enabled)
     SetSavedAddonEnabled(enabled)
     lastAlertAt = -GetAlertDelay()
     print(FormatMessage(ADDON_PREFIX, string_format("%s %s.", ADDON_FULL_NAME, enabled and "enabled" or "disabled")))
+
+    if RefreshInterfaceOptions then
+        RefreshInterfaceOptions()
+    end
 end
 
 local function EnableAddon()
@@ -448,3 +464,153 @@ frame:SetScript("OnEvent", function(self, event, ...)
 
     CheckLowManaAlert()
 end)
+
+local function EnsureWarmaneAddOnsCategory(defaultOpenFunc)
+    local parentPanel = getglobal(PARENT_PANEL_NAME)
+    if not parentPanel then
+        parentPanel = CreateFrame("Frame", PARENT_PANEL_NAME)
+        parentPanel.name = PARENT_CATEGORY_NAME
+
+        local title = parentPanel:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
+        title:SetPoint("TOPLEFT", parentPanel, "TOPLEFT", 16, -16)
+        title:SetText(PARENT_CATEGORY_NAME)
+
+        parentPanel:SetScript("OnShow", function(self)
+            if self.warmaneRedirecting or type(self.warmaneOpenDefaultChild) ~= "function" then
+                return
+            end
+
+            self.warmaneRedirecting = true
+            self.warmaneOpenDefaultChild()
+            self.warmaneRedirecting = false
+        end)
+
+        parentPanel:Hide()
+        InterfaceOptions_AddCategory(parentPanel)
+    end
+
+    if type(parentPanel.warmaneOpenDefaultChild) ~= "function" then
+        parentPanel.warmaneOpenDefaultChild = defaultOpenFunc
+    end
+end
+
+RefreshInterfaceOptions = function()
+    refreshingInterfaceOptions = true
+
+    if interfaceOptionsCheckbox then
+        interfaceOptionsCheckbox:SetChecked(IsAddonEnabled())
+    end
+    if delaySlider then
+        delaySlider:SetValue(GetAlertDelay())
+    end
+    if delayValueText then
+        delayValueText:SetText(GetAlertDelay() .. " sec")
+    end
+    if thresholdSlider then
+        thresholdSlider:SetValue(GetManaThreshold())
+    end
+    if thresholdValueText then
+        thresholdValueText:SetText(GetManaThreshold() .. "%")
+    end
+
+    refreshingInterfaceOptions = false
+end
+
+local function RegisterInterfaceOptions()
+    local function OpenPanel()
+        if interfaceOptionsPanel and type(InterfaceOptionsFrame_OpenToCategory) == "function" then
+            InterfaceOptionsFrame_OpenToCategory(interfaceOptionsPanel)
+        end
+    end
+
+    EnsureWarmaneAddOnsCategory(OpenPanel)
+
+    interfaceOptionsPanel = CreateFrame("Frame", "WHMInterfaceOptionsPanel")
+    interfaceOptionsPanel.name = "Healer Mana"
+    interfaceOptionsPanel.parent = PARENT_CATEGORY_NAME
+
+    local title = interfaceOptionsPanel:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
+    title:SetPoint("TOPLEFT", interfaceOptionsPanel, "TOPLEFT", 16, -16)
+    title:SetText("Warmane Healer Mana")
+
+    local header = interfaceOptionsPanel:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+    header:SetPoint("TOPLEFT", interfaceOptionsPanel, "TOPLEFT", 18, -52)
+    header:SetText("User settings")
+
+    interfaceOptionsCheckbox = CreateFrame("CheckButton", "WHMInterfaceOptionsEnabled", interfaceOptionsPanel, "InterfaceOptionsCheckButtonTemplate")
+    interfaceOptionsCheckbox:SetPoint("TOPLEFT", interfaceOptionsPanel, "TOPLEFT", 14, -76)
+    getglobal(interfaceOptionsCheckbox:GetName() .. "Text"):SetText("Enable healer mana warnings")
+    interfaceOptionsCheckbox:SetScript("OnClick", function(self)
+        SetAddonEnabled(self:GetChecked() and true or false)
+    end)
+
+    local delayLabel = interfaceOptionsPanel:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
+    delayLabel:SetPoint("TOPLEFT", interfaceOptionsPanel, "TOPLEFT", 18, -124)
+    delayLabel:SetText("Warning delay")
+
+    delaySlider = CreateFrame("Slider", "WHMInterfaceOptionsDelaySlider", interfaceOptionsPanel, "OptionsSliderTemplate")
+    delaySlider:SetPoint("TOPLEFT", interfaceOptionsPanel, "TOPLEFT", 128, -122)
+    delaySlider:SetWidth(170)
+    delaySlider:SetMinMaxValues(MIN_ALERT_DELAY, MAX_ALERT_DELAY)
+    delaySlider:SetValueStep(5)
+    getglobal(delaySlider:GetName() .. "Low"):SetText(MIN_ALERT_DELAY .. "s")
+    getglobal(delaySlider:GetName() .. "High"):SetText(MAX_ALERT_DELAY .. "s")
+    delayValueText = interfaceOptionsPanel:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+    delayValueText:SetPoint("LEFT", delaySlider, "RIGHT", 18, 0)
+    delaySlider:SetScript("OnValueChanged", function(self, value)
+        local roundedValue = math_floor((value + 2.5) / 5) * 5
+        if roundedValue < MIN_ALERT_DELAY then
+            roundedValue = MIN_ALERT_DELAY
+        elseif roundedValue > MAX_ALERT_DELAY then
+            roundedValue = MAX_ALERT_DELAY
+        end
+        if roundedValue ~= value then
+            self:SetValue(roundedValue)
+            return
+        end
+        delayValueText:SetText(roundedValue .. " sec")
+        if not refreshingInterfaceOptions then
+            SetAlertDelay(roundedValue)
+            lastAlertAt = -GetAlertDelay()
+            print(FormatMessage(ADDON_PREFIX, "Warning delay set to", tostring(roundedValue)))
+        end
+    end)
+
+    local thresholdLabel = interfaceOptionsPanel:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
+    thresholdLabel:SetPoint("TOPLEFT", interfaceOptionsPanel, "TOPLEFT", 18, -174)
+    thresholdLabel:SetText("Mana threshold")
+
+    thresholdSlider = CreateFrame("Slider", "WHMInterfaceOptionsThresholdSlider", interfaceOptionsPanel, "OptionsSliderTemplate")
+    thresholdSlider:SetPoint("TOPLEFT", interfaceOptionsPanel, "TOPLEFT", 128, -172)
+    thresholdSlider:SetWidth(170)
+    thresholdSlider:SetMinMaxValues(MIN_MANA_THRESHOLD, MAX_MANA_THRESHOLD)
+    thresholdSlider:SetValueStep(1)
+    getglobal(thresholdSlider:GetName() .. "Low"):SetText(MIN_MANA_THRESHOLD .. "%")
+    getglobal(thresholdSlider:GetName() .. "High"):SetText(MAX_MANA_THRESHOLD .. "%")
+    thresholdValueText = interfaceOptionsPanel:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+    thresholdValueText:SetPoint("LEFT", thresholdSlider, "RIGHT", 18, 0)
+    thresholdSlider:SetScript("OnValueChanged", function(self, value)
+        local roundedValue = math_floor(value + 0.5)
+        if roundedValue < MIN_MANA_THRESHOLD then
+            roundedValue = MIN_MANA_THRESHOLD
+        elseif roundedValue > MAX_MANA_THRESHOLD then
+            roundedValue = MAX_MANA_THRESHOLD
+        end
+        if roundedValue ~= value then
+            self:SetValue(roundedValue)
+            return
+        end
+        thresholdValueText:SetText(roundedValue .. "%")
+        if not refreshingInterfaceOptions then
+            SetManaThreshold(roundedValue)
+            print(FormatMessage(ADDON_PREFIX, "Mana threshold set to", roundedValue .. "%"))
+        end
+    end)
+
+    interfaceOptionsPanel:SetScript("OnShow", RefreshInterfaceOptions)
+    interfaceOptionsPanel.refresh = RefreshInterfaceOptions
+    interfaceOptionsPanel:Hide()
+    InterfaceOptions_AddCategory(interfaceOptionsPanel)
+end
+
+RegisterInterfaceOptions()

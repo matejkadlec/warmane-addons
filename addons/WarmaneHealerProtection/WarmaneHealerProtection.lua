@@ -1,6 +1,7 @@
 local addonName, addon = ...
 
 -- Cache frequently used functions
+local getglobal = getglobal
 local print = print
 local pairs = pairs
 local pcall = pcall
@@ -45,6 +46,8 @@ local CHECK_INTERVAL = 0.5
 local RECENT_ATTACK_TTL = 4
 local ADDON_FULL_NAME = "WarmaneHealerProtection"
 local DEFAULT_ADDON_ENABLED = true
+local PARENT_CATEGORY_NAME = "Warmane AddOns"
+local PARENT_PANEL_NAME = "WarmaneAddOnsInterfaceOptionsPanel"
 
 local ATTACK_EVENTS = {
     DAMAGE_SHIELD = true,
@@ -72,6 +75,13 @@ local frame = CreateFrame("Frame")
 local recentAttackers = {}
 local lastAlertAt = -DEFAULT_ALERT_DELAY
 local playerGuid = nil
+local interfaceOptionsPanel = nil
+local interfaceOptionsCheckbox = nil
+local delaySlider = nil
+local delayValueText = nil
+local refreshingInterfaceOptions = false
+
+local RefreshInterfaceOptions
 
 -- Format general messages with prefix and optional value
 local function FormatMessage(prefix, msg, value)
@@ -457,6 +467,10 @@ local function SetAddonEnabled(enabled)
         ResetAggroState()
     end
     print(FormatMessage(ADDON_PREFIX, string_format("%s %s.", ADDON_FULL_NAME, enabled and "enabled" or "disabled")))
+
+    if RefreshInterfaceOptions then
+        RefreshInterfaceOptions()
+    end
 end
 
 local function EnableAddon()
@@ -553,3 +567,116 @@ frame:SetScript("OnEvent", function(self, event, ...)
 
     CheckAggroAlert()
 end)
+
+local function EnsureWarmaneAddOnsCategory(defaultOpenFunc)
+    local parentPanel = getglobal(PARENT_PANEL_NAME)
+    if not parentPanel then
+        parentPanel = CreateFrame("Frame", PARENT_PANEL_NAME)
+        parentPanel.name = PARENT_CATEGORY_NAME
+
+        local title = parentPanel:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
+        title:SetPoint("TOPLEFT", parentPanel, "TOPLEFT", 16, -16)
+        title:SetText(PARENT_CATEGORY_NAME)
+
+        parentPanel:SetScript("OnShow", function(self)
+            if self.warmaneRedirecting or type(self.warmaneOpenDefaultChild) ~= "function" then
+                return
+            end
+
+            self.warmaneRedirecting = true
+            self.warmaneOpenDefaultChild()
+            self.warmaneRedirecting = false
+        end)
+
+        parentPanel:Hide()
+        InterfaceOptions_AddCategory(parentPanel)
+    end
+
+    if type(parentPanel.warmaneOpenDefaultChild) ~= "function" then
+        parentPanel.warmaneOpenDefaultChild = defaultOpenFunc
+    end
+end
+
+RefreshInterfaceOptions = function()
+    refreshingInterfaceOptions = true
+
+    if interfaceOptionsCheckbox then
+        interfaceOptionsCheckbox:SetChecked(IsAddonEnabled())
+    end
+    if delaySlider then
+        delaySlider:SetValue(GetAlertDelay())
+    end
+    if delayValueText then
+        delayValueText:SetText(GetAlertDelay() .. " sec")
+    end
+
+    refreshingInterfaceOptions = false
+end
+
+local function RegisterInterfaceOptions()
+    local function OpenPanel()
+        if interfaceOptionsPanel and type(InterfaceOptionsFrame_OpenToCategory) == "function" then
+            InterfaceOptionsFrame_OpenToCategory(interfaceOptionsPanel)
+        end
+    end
+
+    EnsureWarmaneAddOnsCategory(OpenPanel)
+
+    interfaceOptionsPanel = CreateFrame("Frame", "WHPInterfaceOptionsPanel")
+    interfaceOptionsPanel.name = "Healer Protection"
+    interfaceOptionsPanel.parent = PARENT_CATEGORY_NAME
+
+    local title = interfaceOptionsPanel:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
+    title:SetPoint("TOPLEFT", interfaceOptionsPanel, "TOPLEFT", 16, -16)
+    title:SetText("Warmane Healer Protection")
+
+    local header = interfaceOptionsPanel:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+    header:SetPoint("TOPLEFT", interfaceOptionsPanel, "TOPLEFT", 18, -52)
+    header:SetText("User settings")
+
+    interfaceOptionsCheckbox = CreateFrame("CheckButton", "WHPInterfaceOptionsEnabled", interfaceOptionsPanel, "InterfaceOptionsCheckButtonTemplate")
+    interfaceOptionsCheckbox:SetPoint("TOPLEFT", interfaceOptionsPanel, "TOPLEFT", 14, -76)
+    getglobal(interfaceOptionsCheckbox:GetName() .. "Text"):SetText("Enable healer protection warnings")
+    interfaceOptionsCheckbox:SetScript("OnClick", function(self)
+        SetAddonEnabled(self:GetChecked() and true or false)
+    end)
+
+    local delayLabel = interfaceOptionsPanel:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
+    delayLabel:SetPoint("TOPLEFT", interfaceOptionsPanel, "TOPLEFT", 18, -124)
+    delayLabel:SetText("Warning delay")
+
+    delaySlider = CreateFrame("Slider", "WHPInterfaceOptionsDelaySlider", interfaceOptionsPanel, "OptionsSliderTemplate")
+    delaySlider:SetPoint("TOPLEFT", interfaceOptionsPanel, "TOPLEFT", 128, -122)
+    delaySlider:SetWidth(170)
+    delaySlider:SetMinMaxValues(MIN_ALERT_DELAY, MAX_ALERT_DELAY)
+    delaySlider:SetValueStep(5)
+    getglobal(delaySlider:GetName() .. "Low"):SetText(MIN_ALERT_DELAY .. "s")
+    getglobal(delaySlider:GetName() .. "High"):SetText(MAX_ALERT_DELAY .. "s")
+    delayValueText = interfaceOptionsPanel:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+    delayValueText:SetPoint("LEFT", delaySlider, "RIGHT", 18, 0)
+    delaySlider:SetScript("OnValueChanged", function(self, value)
+        local roundedValue = math_floor((value + 2.5) / 5) * 5
+        if roundedValue < MIN_ALERT_DELAY then
+            roundedValue = MIN_ALERT_DELAY
+        elseif roundedValue > MAX_ALERT_DELAY then
+            roundedValue = MAX_ALERT_DELAY
+        end
+        if roundedValue ~= value then
+            self:SetValue(roundedValue)
+            return
+        end
+        delayValueText:SetText(roundedValue .. " sec")
+        if not refreshingInterfaceOptions then
+            SetAlertDelay(roundedValue)
+            lastAlertAt = -GetAlertDelay()
+            print(FormatMessage(ADDON_PREFIX, "Warning delay set to", tostring(roundedValue)))
+        end
+    end)
+
+    interfaceOptionsPanel:SetScript("OnShow", RefreshInterfaceOptions)
+    interfaceOptionsPanel.refresh = RefreshInterfaceOptions
+    interfaceOptionsPanel:Hide()
+    InterfaceOptions_AddCategory(interfaceOptionsPanel)
+end
+
+RegisterInterfaceOptions()

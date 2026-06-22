@@ -9,6 +9,8 @@ Collection of custom World of Warcraft AddOns specifically developed for Warmane
 
 A big thanks goes to the owner of [`3.3.5-interface-files`](https://github.com/wowgaming/3.3.5-interface-files) GitHub repository, which I'm using a lot during the development.
 
+First-party AddOns expose in-game settings under `Interface -> AddOns -> Warmane AddOns`.
+
 ## 📋 Table of Contents
 
 - [Available AddOns](#-available-addons)
@@ -60,17 +62,20 @@ A big thanks goes to the owner of [`3.3.5-interface-files`](https://github.com/w
   - Clicking a column header sorts ascending/descending by that column
   - Column widths are configurable in `addons/WarmaneInstanceTracker/vars/Constants.lua`
 - Table actions:
-  - `Settings` opens the configuration window
+  - `Settings` opens `Interface -> AddOns -> Warmane AddOns -> Instance Tracker`
   - `Export` opens an in-game CSV export dialog with copyable text
   - Export is intentionally in-client only: WoW 3.3.5a addons cannot write files to arbitrary paths like `C:\wit-export`
 - Slash commands:
   - `/wit` opens or closes the stats table
   - `/wit on` and `/wit off` enable/disable instance tracking without reloading the UI
-  - `/wit config` opens or closes the settings window
+  - `/wit config` opens `Interface -> AddOns -> Warmane AddOns -> Instance Tracker`
   - `/wit update` updates saved table rows with the current logged-in character's level
     - This does **not** update offline alts; WoW only exposes the current character's live level
-- Settings window (`/wit config`) includes persistent checkboxes:
-  - User settings: instance tracking, party completion message
+- Interface Options panel (`Interface -> AddOns -> Warmane AddOns -> Instance Tracker`) includes:
+  - Run statistics buttons: open table, export CSV
+  - Current run controls: status, start/end, pause/continue, reset, and live elapsed time
+  - User settings: instance tracker, party completion message
+  - Table settings: character scope, level-range filter, table size
   - Developer settings: debug printing, debug logging
 - Debug commands (`/wit debug ...`) include `on|off`, `state`, `target`, `simulate "Instance Name" duration xp`, and `log on|off|status|clear`.
 - On completion, can post one summary line to party chat:
@@ -90,6 +95,7 @@ A big thanks goes to the owner of [`3.3.5-interface-files`](https://github.com/w
 - Also shows notification right after the battle begins and ends
 - Slash commands `/wwr` and `/wwr when` check time until next battle
 - Slash commands `/wwr on` and `/wwr off` enable/disable automatic reminders without reloading the UI
+- Interface Options panel: `Warmane AddOns -> WG Reminder`
 - Type `/wwr help` for a list of available commands
 
 > ℹ️ This AddOn is only activates if logged in as a level 80.
@@ -107,6 +113,7 @@ A big thanks goes to the owner of [`3.3.5-interface-files`](https://github.com/w
 - Clear button to reset the copy window content
 - Slash commands `/wcc on` and `/wcc off` enable/disable copying persistently without reloading the UI
 - Slash command `/wcc` shows help
+- Interface Options panel: `Warmane AddOns -> Chat Copy`
 - Type `/wcc help` for a list of available commands
 
 ### WarmaneTrackingAid
@@ -118,6 +125,7 @@ A big thanks goes to the owner of [`3.3.5-interface-files`](https://github.com/w
 - GCD-aware to prevent false switching
 - Implemented to work with manual tracking switching as well
 - Slash commands `/wta on` and `/wta off` enable/disable tracking switching without reloading the UI
+- Interface Options panel: `Warmane AddOns -> Tracking Aid`
 - Type `/wta help` for a list of available commands
 
 > ℹ️ This AddOn only activates if logged in as a Hunter.
@@ -132,6 +140,7 @@ A big thanks goes to the owner of [`3.3.5-interface-files`](https://github.com/w
 - Slash commands `/whm on` and `/whm off` enable/disable healer mana warnings without reloading the UI
 - Slash command `/whm delay <seconds>` changes the saved warning delay between 30 and 180 seconds
 - Slash command `/whm threshold <integer>` changes the saved mana threshold between 5% and 25%
+- Interface Options panel: `Warmane AddOns -> Healer Mana` with enabled, delay, and mana threshold controls
 
 ### WarmaneHealerProtection
 
@@ -142,6 +151,7 @@ A big thanks goes to the owner of [`3.3.5-interface-files`](https://github.com/w
 - Sends `Healer Protection: I have aggro!` to group chat with a configurable 15-second default cooldown
 - Slash commands `/whp on` and `/whp off` enable/disable healer protection warnings without reloading the UI
 - Slash command `/whp` shows help and `/whp delay <seconds>` changes the saved warning delay between 5 and 120 seconds
+- Interface Options panel: `Warmane AddOns -> Healer Protection` with enabled and delay controls
 - Checks visible hostile targets and recent combat-log hits to detect mobs attacking you
 
 ### WarmaneNotAway
@@ -152,6 +162,7 @@ A big thanks goes to the owner of [`3.3.5-interface-files`](https://github.com/w
 - Uses Blizzard's built-in `autoClearAFK` option to keep behavior safe and lightweight
 - Re-enables AFK auto-clear when the AddOn loads and when entering the world
 - Slash commands `/wna on` and `/wna off` enable/disable AFK auto-clear without reloading the UI
+- Interface Options panel: `Warmane AddOns -> Not Away`
 - Type `/wna help` for a list of available commands
 - No key listener, no polling loop, and no manual `/afk` simulation
 

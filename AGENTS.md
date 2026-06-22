@@ -70,7 +70,7 @@
 
 | AddOn | Shortname | Slash command | Notes |
 | ----- | --------- | ------------- | ----- |
-| WarmaneInstanceTracker | WIT | `/wit` | Instance run tracking, stats table, config, manual tracking, debug tools |
+| WarmaneInstanceTracker | WIT | `/wit` | Instance run tracking, stats table, Interface Options config, manual tracking, debug tools |
 | WarmaneWGReminder | WWR | `/wwr` | Wintergrasp timing reminders; level 80 only |
 | WarmaneChatCopy | WCC | `/wcc` | Click chat messages/channel names to copy text |
 | WarmaneTrackingAid | WTA | `/wta` | Hunter tracking switcher; Hunters only |
@@ -115,6 +115,14 @@
 
 ---
 
+## Interface Options Rules
+
+- First-party AddOns with settings register under `Interface -> AddOns -> Warmane AddOns`
+- Use one child panel per AddOn with the short display name, for example `Instance Tracker`, `Chat Copy`, or `Healer Mana`
+- Clicking the shared `Warmane AddOns` parent should open the default child panel, currently `Instance Tracker`
+
+---
+
 ## Slash Command Rules
 
 - These rules apply to first-party Warmane AddOns in `addons/` that expose slash commands
@@ -135,7 +143,7 @@
 - Input is trimmed and lowercased before command lookup; preserve raw argument text where case or spacing matters, such as quoted instance names
 - Define subcommands in a `SUBCOMMANDS` table with `handler` and `args` fields
 - Current first-party slash commands:
-  - `/wit`: bare command opens/closes stats table; `on`, `off`, `config`, `status`, `update`, `start`, `-s`, `end`, `end -s`, `-e`, `reset`, `pause`, `-p`, `continue`, `-c`, `debug`, `help`, `-h`
+  - `/wit`: bare command opens/closes stats table; `on`, `off`, `config` (opens `Interface -> AddOns -> Warmane AddOns -> Instance Tracker`), `status`, `update`, `start`, `-s`, `end`, `end -s`, `-e`, `reset`, `pause`, `-p`, `continue`, `-c`, `debug`, `help`, `-h`
   - `/wwr`: bare command behaves like `when`; `on`, `off`, `when`, `help`, `-h`
   - `/wcc`: bare command behaves like `help`; `on`, `off`, `help`
   - `/wta`: bare command behaves like `help`; `on`, `off`, `help`
