@@ -75,6 +75,11 @@ local refreshingInterfaceOptions = false
 
 local RefreshInterfaceOptions
 
+-- Start a full warning cooldown from the current moment
+local function StartAlertCooldown()
+    lastAlertAt = type(GetTime) == "function" and GetTime() or 0
+end
+
 -- Format general messages with prefix and optional value
 local function FormatMessage(prefix, msg, value)
     if type(prefix) ~= "string" or type(msg) ~= "string" then return "" end
@@ -564,7 +569,11 @@ local function SetAddonEnabled(enabled)
     end
 
     SetSavedAddonEnabled(enabled)
-    lastAlertAt = -GetAlertDelay()
+    if enabled then
+        StartAlertCooldown()
+    else
+        lastAlertAt = -GetAlertDelay()
+    end
     print(FormatMessage(ADDON_PREFIX, string_format("%s %s.", ADDON_FULL_NAME, enabled and "enabled" or "disabled")))
 
     if RefreshInterfaceOptions then
@@ -646,6 +655,7 @@ frame:SetScript("OnEvent", function(self, event, ...)
     if event == "ADDON_LOADED" and ... == addonName then
         InitializeSavedData()
         RegisterSlashCommands()
+        StartAlertCooldown()
         print(FormatMessage(ADDON_PREFIX, "WarmaneHealerMana loaded"))
         return
     end

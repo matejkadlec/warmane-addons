@@ -66,15 +66,9 @@ local HEALER_TALENT_TABS = {
 local PARENT_CATEGORY_NAME = "Warmane AddOns"
 local PARENT_PANEL_NAME = "WarmaneAddOnsInterfaceOptionsPanel"
 
-local ATTACK_EVENTS = {
-    DAMAGE_SHIELD = true,
-    DAMAGE_SHIELD_MISSED = true,
+local DIRECT_ATTACK_EVENTS = {
     RANGE_DAMAGE = true,
     RANGE_MISSED = true,
-    SPELL_DAMAGE = true,
-    SPELL_MISSED = true,
-    SPELL_PERIODIC_DAMAGE = true,
-    SPELL_PERIODIC_MISSED = true,
     SWING_DAMAGE = true,
     SWING_MISSED = true
 }
@@ -100,6 +94,11 @@ local interfaceOptionsPartyCheckboxes = {}
 local refreshingInterfaceOptions = false
 
 local RefreshInterfaceOptions
+
+-- Start a full warning cooldown from the current moment
+local function StartAlertCooldown()
+    lastAlertAt = type(GetTime) == "function" and GetTime() or 0
+end
 
 -- Format general messages with prefix and optional value
 local function FormatMessage(prefix, msg, value)
@@ -465,7 +464,7 @@ local function HandleCombatLogEvent(...)
     end
 
     local _, subevent, sourceGUID, _, sourceFlags, destGUID = ...
-    if not ATTACK_EVENTS[subevent] or destGUID ~= playerGuid then
+    if not DIRECT_ATTACK_EVENTS[subevent] or destGUID ~= playerGuid then
         return
     end
 
@@ -647,7 +646,11 @@ local function SetAddonEnabled(enabled)
     end
 
     SetSavedAddonEnabled(enabled)
-    lastAlertAt = -GetAlertDelay()
+    if enabled then
+        StartAlertCooldown()
+    else
+        lastAlertAt = -GetAlertDelay()
+    end
     if not enabled then
         ResetAggroState()
     end
@@ -732,6 +735,7 @@ frame:SetScript("OnEvent", function(self, event, ...)
         InitializeSavedData()
         RegisterSlashCommands()
         playerGuid = type(UnitGUID) == "function" and UnitGUID("player") or nil
+        StartAlertCooldown()
         print(FormatMessage(ADDON_PREFIX, "WarmaneHealerProtection loaded"))
         return
     end
