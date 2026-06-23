@@ -161,6 +161,10 @@ addon.DUNGEON_BASE_INSTANCE_NAMES = {
 
 -- Canonical names for older client zone names and legacy saved rows
 addon.DUNGEON_INSTANCE_NAME_ALIASES = {
+    ["Stormwind Stockade"] = "The Stockade",
+    ["Stormwind Stockades"] = "The Stockade",
+    ["The Stormwind Stockade"] = "The Stockade",
+    ["The Stormwind Stockades"] = "The Stockade",
     ["The Temple of Atal'Hakkar"] = "Sunken Temple",
     ["Blackrock Depths - Detention Block"] = "Blackrock Depths - Prison",
     ["Dire Maul - Warpwood Quarter"] = "Dire Maul - East",

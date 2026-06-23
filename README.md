@@ -132,26 +132,28 @@ First-party AddOns expose in-game settings under `Interface -> AddOns -> Warmane
 
 ### WarmaneHealerMana
 
-💬 Warns your dungeon group when you are low on mana as the assigned healer.
+💬 Warns your dungeon or raid group when you are low on mana as the assigned healer.
 
-- Active only in 5-player dungeon instances
-- Uses the assigned healer role from Blizzard's dungeon role API
+- Active in party/raid instances for selected group sizes; 5, 10, and 25-player groups are enabled by default
+- Uses Blizzard's assigned healer role when available, with a healer talent/class fallback for manual portal groups
 - Sends `Healer Mana: I'm out of mana!` to group chat with a configurable 60-second default cooldown
 - Slash commands `/whm on` and `/whm off` enable/disable healer mana warnings without reloading the UI
+- Slash command `/whm party <2|3|5|10|25> <on|off>` enables/disables auto-activation for a group size
 - Slash command `/whm delay <seconds>` changes the saved warning delay between 30 and 180 seconds
-- Slash command `/whm threshold <integer>` changes the saved mana threshold between 5% and 25%
-- Interface Options panel: `Warmane AddOns -> Healer Mana` with enabled, delay, and mana threshold controls
+- Slash command `/whm threshold <5|10|15|20|25>` changes the saved mana threshold in 5% steps
+- Interface Options panel: `Warmane AddOns -> Healer Mana` with enabled, delay, mana threshold, and group-size auto-activate controls
 
 ### WarmaneHealerProtection
 
-💬 Warns your dungeon group when you have aggro as the assigned healer.
+💬 Warns your dungeon or raid group when you have aggro as the assigned healer.
 
-- Active only in 5-player dungeon instances
-- Uses the assigned healer role from Blizzard's dungeon role API
+- Active in party/raid instances for selected group sizes; 5, 10, and 25-player groups are enabled by default
+- Uses Blizzard's assigned healer role when available, with a healer talent/class fallback for manual portal groups
 - Sends `Healer Protection: I have aggro!` to group chat with a configurable 15-second default cooldown
 - Slash commands `/whp on` and `/whp off` enable/disable healer protection warnings without reloading the UI
+- Slash command `/whp party <2|3|5|10|25> <on|off>` enables/disables auto-activation for a group size
 - Slash command `/whp` shows help and `/whp delay <seconds>` changes the saved warning delay between 5 and 120 seconds
-- Interface Options panel: `Warmane AddOns -> Healer Protection` with enabled and delay controls
+- Interface Options panel: `Warmane AddOns -> Healer Protection` with enabled, delay, and group-size auto-activate controls
 - Checks visible hostile targets and recent combat-log hits to detect mobs attacking you
 
 ### WarmaneNotAway

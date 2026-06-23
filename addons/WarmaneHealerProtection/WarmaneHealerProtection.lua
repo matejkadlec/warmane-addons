@@ -14,11 +14,14 @@ local string_lower = string.lower
 local strtrim = strtrim
 local strsplit = strsplit
 local CreateFrame = CreateFrame
+local GetActiveTalentGroup = GetActiveTalentGroup
 local GetNumPartyMembers = GetNumPartyMembers
 local GetNumRaidMembers = GetNumRaidMembers
+local GetTalentTabInfo = GetTalentTabInfo
 local GetTime = GetTime
 local IsInInstance = IsInInstance
 local SendChatMessage = SendChatMessage
+local UnitClass = UnitClass
 local UnitCanAttack = UnitCanAttack
 local UnitDetailedThreatSituation = UnitDetailedThreatSituation
 local UnitExists = UnitExists
@@ -46,6 +49,20 @@ local CHECK_INTERVAL = 0.5
 local RECENT_ATTACK_TTL = 4
 local ADDON_FULL_NAME = "WarmaneHealerProtection"
 local DEFAULT_ADDON_ENABLED = true
+local AUTO_ACTIVATE_PARTY_SIZES = { 2, 3, 5, 10, 25 }
+local DEFAULT_AUTO_ACTIVATE_PARTY_SIZES = {
+    [2] = false,
+    [3] = false,
+    [5] = true,
+    [10] = true,
+    [25] = true
+}
+local HEALER_TALENT_TABS = {
+    DRUID = { [3] = true },
+    PALADIN = { [1] = true },
+    PRIEST = { [1] = true, [2] = true },
+    SHAMAN = { [3] = true }
+}
 local PARENT_CATEGORY_NAME = "Warmane AddOns"
 local PARENT_PANEL_NAME = "WarmaneAddOnsInterfaceOptionsPanel"
 
@@ -79,6 +96,7 @@ local interfaceOptionsPanel = nil
 local interfaceOptionsCheckbox = nil
 local delaySlider = nil
 local delayValueText = nil
+local interfaceOptionsPartyCheckboxes = {}
 local refreshingInterfaceOptions = false
 
 local RefreshInterfaceOptions
@@ -101,7 +119,7 @@ local function FormatErrorMessage(prefix, msg)
         COLOR.ORANGE, prefix, COLOR.RED, msg)
 end
 
--- Create the saved settings table and populate the default delay
+-- Create the saved settings table and populate validated defaults
 local function InitializeSavedData()
     if type(HealerProtectionSettings) ~= "table" then
         HealerProtectionSettings = {}
@@ -109,6 +127,17 @@ local function InitializeSavedData()
 
     if type(HealerProtectionSettings.enabled) ~= "boolean" then
         HealerProtectionSettings.enabled = DEFAULT_ADDON_ENABLED
+    end
+
+    if type(HealerProtectionSettings.autoActivatePartySizes) ~= "table" then
+        HealerProtectionSettings.autoActivatePartySizes = {}
+    end
+
+    for i = 1, #AUTO_ACTIVATE_PARTY_SIZES do
+        local partySize = AUTO_ACTIVATE_PARTY_SIZES[i]
+        if type(HealerProtectionSettings.autoActivatePartySizes[partySize]) ~= "boolean" then
+            HealerProtectionSettings.autoActivatePartySizes[partySize] = DEFAULT_AUTO_ACTIVATE_PARTY_SIZES[partySize]
+        end
     end
 
     local savedDelay = HealerProtectionSettings.alertDelay
@@ -130,6 +159,23 @@ end
 local function SetSavedAddonEnabled(enabled)
     InitializeSavedData()
     HealerProtectionSettings.enabled = enabled and true or false
+end
+
+-- Return whether a party size can be configured for auto-activation
+local function IsSupportedPartySize(partySize)
+    return DEFAULT_AUTO_ACTIVATE_PARTY_SIZES[partySize] ~= nil
+end
+
+-- Read one persisted auto-activation party-size toggle safely
+local function IsAutoActivatePartySizeEnabled(partySize)
+    InitializeSavedData()
+    return HealerProtectionSettings.autoActivatePartySizes[partySize] == true
+end
+
+-- Persist one validated auto-activation party-size toggle
+local function SetSavedAutoActivatePartySize(partySize, enabled)
+    InitializeSavedData()
+    HealerProtectionSettings.autoActivatePartySizes[partySize] = enabled and true or false
 end
 
 -- Read the current persisted delay safely
@@ -177,24 +223,112 @@ local function GetGroupChatChannel()
     return nil
 end
 
--- Return true only while the player is inside a 5-player dungeon instance
-local function IsActiveDungeonInstance()
+-- Return the current group size using the 3.3.5a party/raid APIs
+local function GetCurrentPartySize()
+    if type(GetNumRaidMembers) == "function" then
+        local raidMembers = GetNumRaidMembers()
+        if raidMembers > 0 then
+            return raidMembers
+        end
+    end
+
+    if type(GetNumPartyMembers) == "function" then
+        local partyMembers = GetNumPartyMembers()
+        if partyMembers > 0 then
+            return partyMembers + 1
+        end
+    end
+
+    if type(UnitName) == "function" and UnitName("party1") then
+        return 2
+    end
+
+    return 1
+end
+
+-- Return true only while the current party or raid instance size is enabled
+local function IsActiveGroupInstance()
     if type(IsInInstance) ~= "function" then
         return false
     end
 
     local success, isInstance, instanceType = pcall(IsInInstance)
-    return success and isInstance and instanceType == "party"
-end
-
--- Return whether the player is currently assigned as a healer
-local function IsPlayerHealer()
-    if type(UnitGroupRolesAssigned) ~= "function" then
+    if not success or not isInstance or (instanceType ~= "party" and instanceType ~= "raid") then
         return false
     end
 
-    local _, isHealer = UnitGroupRolesAssigned("player")
-    return isHealer == true
+    return IsAutoActivatePartySizeEnabled(GetCurrentPartySize())
+end
+
+-- Return true for classes that can reasonably be the healer in manual groups
+local function IsPlayerHealerClass()
+    if type(UnitClass) ~= "function" then
+        return false
+    end
+
+    local _, classFileName = UnitClass("player")
+    return HEALER_TALENT_TABS[classFileName] ~= nil
+end
+
+-- Return healer talent status when the active spec is clear enough to trust
+local function IsPlayerUsingHealerTalents()
+    if type(UnitClass) ~= "function" or type(GetActiveTalentGroup) ~= "function" or type(GetTalentTabInfo) ~= "function" then
+        return nil
+    end
+
+    local _, classFileName = UnitClass("player")
+    local healerTabs = HEALER_TALENT_TABS[classFileName]
+    if not healerTabs then
+        return false
+    end
+
+    local groupSuccess, talentGroup = pcall(GetActiveTalentGroup, false, false)
+    if not groupSuccess or type(talentGroup) ~= "number" then
+        return nil
+    end
+
+    local highestPoints = 0
+    local highestTab = nil
+    local hasHealerTie = false
+
+    for i = 1, 3 do
+        local tabSuccess, _, _, pointsSpent = pcall(GetTalentTabInfo, i, false, false, talentGroup)
+        if tabSuccess and type(pointsSpent) == "number" then
+            if pointsSpent > highestPoints then
+                highestPoints = pointsSpent
+                highestTab = i
+                hasHealerTie = healerTabs[i] == true
+            elseif pointsSpent == highestPoints and pointsSpent > 0 and healerTabs[i] then
+                hasHealerTie = true
+            end
+        end
+    end
+
+    if highestPoints <= 0 then
+        return nil
+    end
+
+    return healerTabs[highestTab] == true or hasHealerTie
+end
+
+-- Return whether the player is assigned or likely acting as a healer
+local function IsPlayerHealer()
+    if type(UnitGroupRolesAssigned) == "function" then
+        local isTank, isHealer, isDamage = UnitGroupRolesAssigned("player")
+        if isHealer == true then
+            return true
+        end
+        if isTank == true or isDamage == true then
+            return false
+        end
+    end
+
+    local isHealerTalents = IsPlayerUsingHealerTalents()
+    if isHealerTalents ~= nil then
+        return isHealerTalents
+    end
+
+    return IsPlayerHealerClass()
 end
 
 -- Build a target token using the formats present in 3.3.5a FrameXML
@@ -364,7 +498,7 @@ local function CheckAggroAlert()
         return
     end
 
-    if not IsActiveDungeonInstance() or not IsPlayerHealer() then
+    if not IsActiveGroupInstance() or not IsPlayerHealer() then
         return
     end
 
@@ -390,6 +524,7 @@ local function PrintHelp()
     print(FormatMessage(ADDON_PREFIX, "Available commands:"))
     print("  |cFFFF8000/whp on |cFFFFFF00- Enable healer protection warnings|r")
     print("  |cFFFF8000/whp off |cFFFFFF00- Disable healer protection warnings|r")
+    print("  |cFFFF8000/whp party <2|3|5|10|25> <on|off> |cFFFFFF00- Enable/disable auto-activate for a party size|r")
     print("  |cFFFF8000/whp help |cFFFFFF00- Show this help|r")
     print("  |cFFFF8000/whp delay |cFFFFFF00- Show the current warning delay|r")
     print("  |cFFFF8000/whp delay <seconds> |cFFFFFF00- Set the warning delay (5-120)|r")
@@ -400,8 +535,14 @@ local function PrintDelay()
     print(FormatMessage(ADDON_PREFIX, "Current warning delay", tostring(GetAlertDelay())))
 end
 
--- Parse one integer delay value from slash command input
-local function ParseDelayArgument(rawArg)
+-- Print the saved auto-activation state for one party size
+local function PrintAutoActivatePartySize(partySize, enabled)
+    print(FormatMessage(ADDON_PREFIX, string_format("%s%d%s party size auto-activate %s.",
+        COLOR.ORANGE, partySize, COLOR.YELLOW, enabled and "on" or "off")))
+end
+
+-- Parse one integer value from slash command input
+local function ParseIntegerArgument(rawArg)
     local trimmedArg = strtrim(rawArg or "")
     if trimmedArg == "" then
         return nil
@@ -436,7 +577,7 @@ local function HandleDelay(args)
         return
     end
 
-    local seconds = ParseDelayArgument(firstArg)
+    local seconds = ParseIntegerArgument(firstArg)
     if not seconds then
         print(FormatErrorMessage(ADDON_PREFIX,
             "execute command. Invalid argument for 'delay' (expected seconds from 5 to 120)"))
@@ -451,6 +592,50 @@ local function HandleDelay(args)
 
     SetAlertDelay(seconds)
     print(FormatMessage(ADDON_PREFIX, "Warning delay set to", tostring(seconds)))
+end
+
+-- Enable or disable auto-activation for one supported party size
+local function SetAutoActivatePartySize(partySize, enabled)
+    SetSavedAutoActivatePartySize(partySize, enabled)
+    if not enabled and GetCurrentPartySize() == partySize then
+        ResetAggroState()
+    end
+    PrintAutoActivatePartySize(partySize, enabled)
+
+    if RefreshInterfaceOptions then
+        RefreshInterfaceOptions()
+    end
+end
+
+-- Handle /whp party <2|3|5|10|25> <on|off>
+local function HandleParty(args)
+    local trimmedArgs = strtrim(args or "")
+    local sizeArg, remainingArgs = strsplit(" ", trimmedArgs, 2)
+    remainingArgs = strtrim(remainingArgs or "")
+    local stateArg, extraArg = strsplit(" ", remainingArgs, 2)
+    extraArg = strtrim(extraArg or "")
+
+    if trimmedArgs == "" or remainingArgs == "" or extraArg ~= "" then
+        print(FormatErrorMessage(ADDON_PREFIX,
+            "execute command. Wrong number of arguments for 'party' (expected 2)"))
+        return
+    end
+
+    local partySize = ParseIntegerArgument(sizeArg)
+    if not partySize or not IsSupportedPartySize(partySize) then
+        print(FormatErrorMessage(ADDON_PREFIX,
+            "execute command. Invalid argument for 'party' (expected party size 2, 3, 5, 10, or 25)"))
+        return
+    end
+
+    local normalizedState = string_lower(stateArg or "")
+    if normalizedState ~= "on" and normalizedState ~= "off" then
+        print(FormatErrorMessage(ADDON_PREFIX,
+            "execute command. Invalid argument for 'party' (expected on or off)"))
+        return
+    end
+
+    SetAutoActivatePartySize(partySize, normalizedState == "on")
 end
 
 -- Enable or disable healer protection warnings without reloading the UI
@@ -481,15 +666,16 @@ local function DisableAddon()
     SetAddonEnabled(false)
 end
 
+local SUBCOMMANDS = {
+    ["on"] = { handler = EnableAddon, args = 0 },
+    ["off"] = { handler = DisableAddon, args = 0 },
+    ["party"] = { handler = HandleParty, args = 2 },
+    ["help"] = { handler = PrintHelp, args = 0 },
+    ["delay"] = { handler = HandleDelay, args = 1 }
+}
+
 -- Register slash command parser following Blizzard pattern
 local function RegisterSlashCommands()
-    local subcommands = {
-        ["on"] = { handler = EnableAddon, args = 0 },
-        ["off"] = { handler = DisableAddon, args = 0 },
-        ["help"] = { handler = PrintHelp, args = 0 },
-        ["delay"] = { handler = HandleDelay }
-    }
-
     SLASH_WHP1 = "/whp"
     SlashCmdList["WHP"] = function(msg)
         local rawMsg = strtrim(msg or "")
@@ -501,7 +687,7 @@ local function RegisterSlashCommands()
         end
 
         local subcommand = strsplit(" ", normalizedMsg, 2)
-        local command = subcommands[subcommand]
+        local command = SUBCOMMANDS[subcommand]
         local _, rawArgs = strsplit(" ", rawMsg, 2)
         rawArgs = strtrim(rawArgs or "")
 
@@ -523,9 +709,11 @@ end
 
 frame:RegisterEvent("ADDON_LOADED")
 frame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+frame:RegisterEvent("PARTY_MEMBERS_CHANGED")
 frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 frame:RegisterEvent("PLAYER_ROLES_ASSIGNED")
 frame:RegisterEvent("PLAYER_TARGET_CHANGED")
+frame:RegisterEvent("RAID_ROSTER_UPDATE")
 frame:RegisterEvent("UNIT_THREAT_SITUATION_UPDATE")
 frame:RegisterEvent("ZONE_CHANGED_NEW_AREA")
 
@@ -554,13 +742,14 @@ frame:SetScript("OnEvent", function(self, event, ...)
         return
     end
 
-    if event == "ZONE_CHANGED_NEW_AREA" and not IsActiveDungeonInstance() then
+    if (event == "ZONE_CHANGED_NEW_AREA" or event == "PARTY_MEMBERS_CHANGED" or event == "RAID_ROSTER_UPDATE")
+        and not IsActiveGroupInstance() then
         ResetAggroState()
         return
     end
 
     if event == "COMBAT_LOG_EVENT_UNFILTERED" then
-        if IsAddonEnabled() then
+        if IsAddonEnabled() and IsActiveGroupInstance() then
             HandleCombatLogEvent(...)
         end
     end
@@ -608,6 +797,13 @@ RefreshInterfaceOptions = function()
     end
     if delayValueText then
         delayValueText:SetText(GetAlertDelay() .. " sec")
+    end
+    for i = 1, #AUTO_ACTIVATE_PARTY_SIZES do
+        local partySize = AUTO_ACTIVATE_PARTY_SIZES[i]
+        local checkbox = interfaceOptionsPartyCheckboxes[partySize]
+        if checkbox then
+            checkbox:SetChecked(IsAutoActivatePartySizeEnabled(partySize))
+        end
     end
 
     refreshingInterfaceOptions = false
@@ -672,6 +868,24 @@ local function RegisterInterfaceOptions()
             print(FormatMessage(ADDON_PREFIX, "Warning delay set to", tostring(roundedValue)))
         end
     end)
+
+    local autoActivateHeader = interfaceOptionsPanel:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+    autoActivateHeader:SetPoint("TOPLEFT", interfaceOptionsPanel, "TOPLEFT", 18, -174)
+    autoActivateHeader:SetText("Auto-Activate On:")
+
+    for i = 1, #AUTO_ACTIVATE_PARTY_SIZES do
+        local partySize = AUTO_ACTIVATE_PARTY_SIZES[i]
+        local checkbox = CreateFrame("CheckButton", "WHPInterfaceOptionsPartySize" .. partySize, interfaceOptionsPanel, "InterfaceOptionsCheckButtonTemplate")
+        checkbox.partySize = partySize
+        checkbox:SetPoint("TOPLEFT", interfaceOptionsPanel, "TOPLEFT", 14, -188 - ((i - 1) * 24))
+        getglobal(checkbox:GetName() .. "Text"):SetText(partySize .. " Player Group")
+        checkbox:SetScript("OnClick", function(self)
+            if not refreshingInterfaceOptions then
+                SetAutoActivatePartySize(self.partySize, self:GetChecked() and true or false)
+            end
+        end)
+        interfaceOptionsPartyCheckboxes[partySize] = checkbox
+    end
 
     interfaceOptionsPanel:SetScript("OnShow", RefreshInterfaceOptions)
     interfaceOptionsPanel.refresh = RefreshInterfaceOptions
