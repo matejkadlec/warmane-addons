@@ -52,6 +52,7 @@ First-party AddOns expose in-game settings under `Interface -> AddOns -> Warmane
   - WIT updates the saved character level when you level up and when you enter the world on that character
   - Existing old rows can still be backfilled with `/wit update` while logged into that character
 - Instance names in the table include level ranges where available, for example `Wailing Caverns (15 - 25)`
+- WIT normalizes known alternate dungeon names reported by the client/Warmane, including hub-and-wing names such as `Auchindoun: Sethekk Halls`.
 - Max-level and other no-XP runs are handled safely:
   - Such runs still increase run counts and time statistics
   - Level-based columns show `-` when no precise level-progress data exists for that character+instance row

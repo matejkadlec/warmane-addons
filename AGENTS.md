@@ -70,7 +70,7 @@
 
 | AddOn | Shortname | Slash command | Notes |
 | ----- | --------- | ------------- | ----- |
-| WarmaneInstanceTracker | WIT | `/wit` | Instance run tracking, level-normalized stats table, Interface Options config, manual tracking, debug tools |
+| WarmaneInstanceTracker | WIT | `/wit` | Instance run tracking, dungeon name alias normalization, level-normalized stats table, Interface Options config, manual tracking, debug tools |
 | WarmaneWGReminder | WWR | `/wwr` | Wintergrasp timing reminders; level 80 only |
 | WarmaneChatCopy | WCC | `/wcc` | Click chat messages/channel names to copy text |
 | WarmaneTrackingAid | WTA | `/wta` | Hunter tracking switcher; Hunters only |

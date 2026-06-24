@@ -83,6 +83,7 @@ local recentGroupLossReason = nil
 local recentGroupLossAt = 0
 local recentLFGInstanceName = nil
 local recentLFGInstanceAt = 0
+local normalizedInstanceNameAliases = nil
 local instanceTrackingEnabled = true
 local partyMessageEnabled = true
 local debugMode = false
@@ -249,13 +250,38 @@ local function NormalizeInstanceName(rawName)
     return normalized
 end
 
+-- Cache normalized alias keys so punctuation or case differences still resolve
+local function GetNormalizedInstanceNameAliases()
+    if type(normalizedInstanceNameAliases) == "table" then
+        return normalizedInstanceNameAliases
+    end
+
+    normalizedInstanceNameAliases = {}
+    for aliasName, canonicalName in pairs(DUNGEON_INSTANCE_NAME_ALIASES) do
+        local normalizedAlias = NormalizeInstanceName(aliasName)
+        if normalizedAlias then
+            normalizedInstanceNameAliases[normalizedAlias] = canonicalName
+        end
+    end
+
+    return normalizedInstanceNameAliases
+end
+
 -- Resolve known legacy or client zone names to the AddOn's saved display name
 local function GetCanonicalInstanceName(rawName)
     if type(rawName) ~= "string" then
         return rawName
     end
 
-    return DUNGEON_INSTANCE_NAME_ALIASES[rawName] or rawName
+    local canonicalName = DUNGEON_INSTANCE_NAME_ALIASES[rawName]
+    if canonicalName then
+        return canonicalName
+    end
+
+    local normalizedName = NormalizeInstanceName(rawName)
+    local normalizedAliases = GetNormalizedInstanceNameAliases()
+
+    return normalizedAliases[normalizedName] or rawName
 end
 
 -- Use parent instance names for wing matching when the client reports only a base zone
