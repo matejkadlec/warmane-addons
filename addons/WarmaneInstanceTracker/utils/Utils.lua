@@ -13,7 +13,7 @@ local string_sub = string.sub
 local string_gsub = string.gsub
 
 -- Track schema version for saved aggregate stats
-local STATS_SCHEMA_VERSION = 2
+local STATS_SCHEMA_VERSION = 3
 local MAX_PLAYER_LEVEL_FALLBACK = 80
 local DEBUG_LOG_MAX_ENTRIES = 5000
 
@@ -148,6 +148,34 @@ local function RoundNumber(value)
     return math_floor(value + 0.5)
 end
 
+-- Round level-progress fields to two decimals for saved calculations
+local function RoundLevelProgress(value)
+    if type(value) ~= "number" or value < 0 then
+        return nil
+    end
+
+    return math_floor((value * 100) + 0.5) / 100
+end
+
+-- Normalize level-progress values from current and future run records
+local function NormalizeLevelProgress(value)
+    local numericValue = tonumber(value)
+    if type(numericValue) ~= "number" or numericValue < 0 then
+        return nil
+    end
+
+    return RoundLevelProgress(numericValue)
+end
+
+-- Read precise normalized level gain only from runs that explicitly saved it
+local function ResolveRunLevelProgress(run)
+    if type(run) ~= "table" then
+        return nil
+    end
+
+    return NormalizeLevelProgress(run.levelsGained)
+end
+
 -- Ensure aggregate table always exists
 local function EnsureInstanceStatsTable()
     if type(InstancesData.instanceStats) ~= "table" then
@@ -224,6 +252,18 @@ local function RecalculateAverages(record)
         record.averageXP = nil
         record.averageXPPerMinute = nil
     end
+
+    if type(record.levelProgressRuns) == "number" and record.levelProgressRuns > 0 then
+        record.averageLevelsPerRun = RoundLevelProgress(record.totalLevelProgress / record.levelProgressRuns)
+        if type(record.totalLevelProgressDuration) == "number" and record.totalLevelProgressDuration > 0 then
+            record.averageLevelsPerMinute = RoundLevelProgress(record.totalLevelProgress / (record.totalLevelProgressDuration / 60))
+        else
+            record.averageLevelsPerMinute = 0
+        end
+    else
+        record.averageLevelsPerRun = nil
+        record.averageLevelsPerMinute = nil
+    end
 end
 
 -- Validate one aggregate stats record
@@ -240,7 +280,7 @@ local function IsValidStatsRecord(record)
 end
 
 -- Insert one run into the aggregate table
-local function UpsertInstanceStats(character, instanceName, duration, xpGained, xpEligible, characterLevel)
+local function UpsertInstanceStats(character, instanceName, duration, xpGained, xpEligible, characterLevel, levelsGained)
     if not IsValidText(character) or not IsValidText(instanceName) then
         return nil
     end
@@ -252,6 +292,7 @@ local function UpsertInstanceStats(character, instanceName, duration, xpGained, 
     if safeXP < 0 then
         safeXP = 0
     end
+    local safeLevelsGained = NormalizeLevelProgress(levelsGained)
 
     EnsureInstanceStatsTable()
     local knownLevel = UpdateCharacterLevel(character, characterLevel)
@@ -268,6 +309,9 @@ local function UpsertInstanceStats(character, instanceName, duration, xpGained, 
             totalXP = 0,
             xpRuns = 0,
             totalXPDuration = 0,
+            totalLevelProgress = 0,
+            levelProgressRuns = 0,
+            totalLevelProgressDuration = 0,
             totalDuration = 0,
             averageTime = 0,
             fastestTime = 0
@@ -291,6 +335,18 @@ local function UpsertInstanceStats(character, instanceName, duration, xpGained, 
         record.totalXPDuration = type(record.totalXPDuration) == "number" and record.totalXPDuration or 0
     end
 
+    if xpEligible == true and safeLevelsGained then
+        record.totalLevelProgress = (type(record.totalLevelProgress) == "number" and record.totalLevelProgress or 0) + safeLevelsGained
+        record.levelProgressRuns = (type(record.levelProgressRuns) == "number" and record.levelProgressRuns or 0) + 1
+        record.totalLevelProgressDuration =
+            (type(record.totalLevelProgressDuration) == "number" and record.totalLevelProgressDuration or 0) + duration
+    else
+        record.totalLevelProgress = type(record.totalLevelProgress) == "number" and record.totalLevelProgress or 0
+        record.levelProgressRuns = type(record.levelProgressRuns) == "number" and record.levelProgressRuns or 0
+        record.totalLevelProgressDuration =
+            type(record.totalLevelProgressDuration) == "number" and record.totalLevelProgressDuration or 0
+    end
+
     if type(record.fastestTime) ~= "number" or record.fastestTime <= 0 or duration < record.fastestTime then
         record.fastestTime = duration
     end
@@ -301,8 +357,10 @@ end
 
 -- Rebuild aggregate table from historical runs once during schema migration
 local function RebuildInstanceStatsFromInstances()
+    local savedCharacterLevels = type(InstancesData.characterLevels) == "table" and InstancesData.characterLevels or {}
+
     InstancesData.instanceStats = {}
-    InstancesData.characterLevels = {}
+    InstancesData.characterLevels = savedCharacterLevels
     if type(InstancesData.instances) ~= "table" then
         return
     end
@@ -318,7 +376,8 @@ local function RebuildInstanceStatsFromInstances()
             end
             local runLevel = NormalizeLevel(run.level)
             local xpEligible = ResolveRunXPEligibility(run, runXP)
-            UpsertInstanceStats(run.character, run.name, run.duration, runXP, xpEligible, runLevel)
+            local levelsGained = ResolveRunLevelProgress(run)
+            UpsertInstanceStats(run.character, run.name, run.duration, runXP, xpEligible, runLevel, levelsGained)
         end
     end
 end
@@ -337,8 +396,22 @@ local function SanitizeInstanceStats()
             if type(record.totalXPDuration) ~= "number" then
                 record.totalXPDuration = 0
             end
+            if type(record.totalLevelProgress) ~= "number" or record.totalLevelProgress < 0 then
+                record.totalLevelProgress = 0
+            else
+                record.totalLevelProgress = RoundLevelProgress(record.totalLevelProgress) or 0
+            end
+            if type(record.levelProgressRuns) ~= "number" then
+                record.levelProgressRuns = 0
+            end
+            if type(record.totalLevelProgressDuration) ~= "number" then
+                record.totalLevelProgressDuration = 0
+            end
             if record.xpRuns > record.totalRuns then
                 record.xpRuns = record.totalRuns
+            end
+            if record.levelProgressRuns > record.totalRuns then
+                record.levelProgressRuns = record.totalRuns
             end
             if record.fastestTime > record.totalDuration then
                 record.fastestTime = record.totalDuration
@@ -443,6 +516,13 @@ addon.utils = {
             instanceData.xpEligible = ResolveRunXPEligibility(instanceData, runXP)
         end
 
+        local levelsGained = NormalizeLevelProgress(instanceData.levelsGained)
+        if levelsGained then
+            instanceData.levelsGained = levelsGained
+        else
+            instanceData.levelsGained = nil
+        end
+
         tinsert(InstancesData.instances, instanceData)
         return UpsertInstanceStats(
             instanceData.character,
@@ -450,7 +530,8 @@ addon.utils = {
             instanceData.duration,
             runXP,
             instanceData.xpEligible,
-            characterLevel
+            characterLevel,
+            levelsGained
         ) ~= nil
     end,
 
@@ -523,10 +604,15 @@ addon.utils = {
                     totalXP = record.totalXP,
                     xpRuns = record.xpRuns,
                     totalXPDuration = record.totalXPDuration,
+                    totalLevelProgress = record.totalLevelProgress,
+                    levelProgressRuns = record.levelProgressRuns,
+                    totalLevelProgressDuration = record.totalLevelProgressDuration,
                     totalDuration = record.totalDuration,
                     averageXP = record.averageXP,
                     averageTime = record.averageTime,
                     averageXPPerMinute = record.averageXPPerMinute,
+                    averageLevelsPerRun = record.averageLevelsPerRun,
+                    averageLevelsPerMinute = record.averageLevelsPerMinute,
                     fastestTime = record.fastestTime
                 }
             end
@@ -560,6 +646,8 @@ addon.utils = {
             averageTime = record.averageTime,
             fastestTime = record.fastestTime,
             averageXP = record.xpRuns > 0 and record.averageXP and record.averageXP > 0 and record.averageXP or nil,
+            averageLevelsPerRun = record.levelProgressRuns > 0 and record.averageLevelsPerRun or nil,
+            averageLevelsPerMinute = record.levelProgressRuns > 0 and record.averageLevelsPerMinute or nil,
             totalRuns = record.totalRuns
         }
     end,

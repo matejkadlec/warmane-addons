@@ -44,18 +44,18 @@ First-party AddOns expose in-game settings under `Interface -> AddOns -> Warmane
   - `Character`
   - `Instance`
   - `Total Runs`
-  - `Average XP`
   - `Average Time`
   - `Fastest Time`
-  - `XP Per Minute`
+  - `Levels Per Minute`
+  - `Levels Per Run`
 - Character rows include the latest known level in the table, for example `Baladie (42)`
-  - When a run is saved on that character, all of that character's saved rows are updated to the newest known level
-  - Existing old rows can be backfilled with `/wit update` while logged into that character
+  - WIT updates the saved character level when you level up and when you enter the world on that character
+  - Existing old rows can still be backfilled with `/wit update` while logged into that character
 - Instance names in the table include level ranges where available, for example `Wailing Caverns (15 - 25)`
 - Max-level and other no-XP runs are handled safely:
   - Such runs still increase run counts and time statistics
-  - XP-based columns show `-` when no XP-bearing runs exist for that character+instance row
-  - XP averages are calculated only from XP-bearing runs, so level 80 clears do not drag XP averages down to zero
+  - Level-based columns show `-` when no precise level-progress data exists for that character+instance row
+  - Level averages are calculated only from XP-bearing runs, so level 80 clears do not drag leveling stats down to zero
 - Table quality-of-life features:
   - Live text search filters rows as you type
   - Character dropdown filter supports `All` plus multi-select toggles with instant checkmark updates
@@ -79,11 +79,12 @@ First-party AddOns expose in-game settings under `Interface -> AddOns -> Warmane
   - Developer settings: debug printing, debug logging
 - Debug commands (`/wit debug ...`) include `on|off`, `state`, `target`, `simulate "Instance Name" duration xp`, and `log on|off|status|clear`.
 - On completion, can post one summary line to party chat:
-  - `[WIT] <instance> finished in <hh:mm:ss> | XP gained: <xp> | Runs till next level: <value>`
+  - `[WIT] <instance> completed in <time>. Levels per minute: <value>. Levels per run: <value>.`
 - SavedVariables are split for clarity:
   - `InstancesData` (runs + aggregated stats)
   - `SettingsData` (user/developer toggles)
   - `DebugData` (debug death log)
+  - New runs save per-run `levelsGained` plus a `levels` table of level-to-next-level XP values, for example `[30] = 38880`
   - Aggregated stats use a dedicated schema migration path so historical runs can be rebuilt after stat structure updates
 
 ### WarmaneWGReminder
@@ -137,6 +138,7 @@ First-party AddOns expose in-game settings under `Interface -> AddOns -> Warmane
 - Active in party/raid instances for selected group sizes; 5, 10, and 25-player groups are enabled by default
 - Uses Blizzard's assigned healer role when available, with a healer talent/class fallback for manual portal groups
 - Sends `Healer Mana: I'm out of mana!` to group chat with a configurable 60-second default cooldown
+- Enabling the AddOn mid-fight starts a full warning delay before the first low-mana shout
 - Slash commands `/whm on` and `/whm off` enable/disable healer mana warnings without reloading the UI
 - Slash command `/whm party <2|3|5|10|25> <on|off>` enables/disables auto-activation for a group size
 - Slash command `/whm delay <seconds>` changes the saved warning delay between 30 and 180 seconds
@@ -150,11 +152,12 @@ First-party AddOns expose in-game settings under `Interface -> AddOns -> Warmane
 - Active in party/raid instances for selected group sizes; 5, 10, and 25-player groups are enabled by default
 - Uses Blizzard's assigned healer role when available, with a healer talent/class fallback for manual portal groups
 - Sends `Healer Protection: I have aggro!` to group chat with a configurable 15-second default cooldown
+- Enabling the AddOn mid-fight starts a full warning delay before the first aggro shout
 - Slash commands `/whp on` and `/whp off` enable/disable healer protection warnings without reloading the UI
 - Slash command `/whp party <2|3|5|10|25> <on|off>` enables/disables auto-activation for a group size
 - Slash command `/whp` shows help and `/whp delay <seconds>` changes the saved warning delay between 5 and 120 seconds
 - Interface Options panel: `Warmane AddOns -> Healer Protection` with enabled, delay, and group-size auto-activate controls
-- Checks visible hostile targets and recent combat-log hits to detect mobs attacking you
+- Checks visible hostile targets and recent direct combat-log hits to detect mobs attacking you, without treating boss spell casts alone as aggro
 
 ### WarmaneNotAway
 
@@ -176,6 +179,7 @@ First-party AddOns expose in-game settings under `Interface -> AddOns -> Warmane
 
 - Lives separately from first-party AddOns in `backports/MBB`
 - Collects minimap buttons into a single pop-out menu
+- Persists the MBB button position per character across `/reload` and addon syncs
 - Keeps the original AddOn identity while applying compatibility and bug fixes for this repository
 - Includes English UI text only
 
@@ -185,7 +189,7 @@ First-party AddOns expose in-game settings under `Interface -> AddOns -> Warmane
 
 ![Instance Tracker Demo](screenshots/instance-tracker-demo.png)
 
-_A filterable, sortable in-game table tracking your dungeon runs with leveling context, XP/time averages, and copyable CSV export._
+_A filterable, sortable in-game table tracking your dungeon runs with leveling context, level/time averages, and copyable CSV export._
 
 ### WarmaneWGReminder
 

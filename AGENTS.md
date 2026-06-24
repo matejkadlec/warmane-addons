@@ -70,19 +70,19 @@
 
 | AddOn | Shortname | Slash command | Notes |
 | ----- | --------- | ------------- | ----- |
-| WarmaneInstanceTracker | WIT | `/wit` | Instance run tracking, stats table, Interface Options config, manual tracking, debug tools |
+| WarmaneInstanceTracker | WIT | `/wit` | Instance run tracking, level-normalized stats table, Interface Options config, manual tracking, debug tools |
 | WarmaneWGReminder | WWR | `/wwr` | Wintergrasp timing reminders; level 80 only |
 | WarmaneChatCopy | WCC | `/wcc` | Click chat messages/channel names to copy text |
 | WarmaneTrackingAid | WTA | `/wta` | Hunter tracking switcher; Hunters only |
-| WarmaneHealerMana | WHM | `/whm` | Healer low-mana group warning; manual role fallback |
-| WarmaneHealerProtection | WHP | `/whp` | Healer aggro group warning; manual role fallback |
+| WarmaneHealerMana | WHM | `/whm` | Healer low-mana group warning; manual role fallback; delayed first shout after enabling |
+| WarmaneHealerProtection | WHP | `/whp` | Healer aggro group warning; manual role fallback; direct-attack aggro fallback |
 | WarmaneNotAway | WNA | `/wna` | Automatically re-enables/uses Blizzard AFK auto-clear |
 
 ### Backported AddOns (`backports/`)
 
 | AddOn | Slash command | Notes |
 | ----- | ------------- | ----- |
-| MBB (MinimapButtonBag) | `/mmbb`, `/minimapbuttonbag` | Third-party minimap button bag, backported for Warmane/3.3.5a |
+| MBB (MinimapButtonBag) | `/mmbb`, `/minimapbuttonbag` | Third-party minimap button bag, backported for Warmane/3.3.5a; persists button position per character |
 
 ---
 

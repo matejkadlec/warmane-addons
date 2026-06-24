@@ -3,6 +3,7 @@ local addonName, addon = ...
 -- Cache frequently used functions
 local type = type
 local math_floor = math.floor
+local math_ceil = math.ceil
 local math_abs = math.abs
 local string_format = string.format
 
@@ -32,6 +33,23 @@ addon.format = {
     -- Format numbers with thousand separators
     Number = function(number)
         return common.Number(number)
+    end,
+
+    -- Format level fractions with upward one-decimal rounding
+    LevelProgress = function(value)
+        if type(value) ~= "number" or value < 0 then
+            return "-"
+        end
+
+        if value == 0 then
+            return "0.0"
+        end
+
+        if value <= 0.04 then
+            return "<0.1"
+        end
+
+        return string_format("%.1f", math_ceil(value * 10) / 10)
     end,
 
     -- Format entering instance message with consistent coloring

@@ -45,6 +45,7 @@ addon.ui.CreateStatsTable = function(options)
     options = options or {}
 
     local utils = addon.utils
+    local format = addon.format or {}
 
     local statsFrame = nil
     local statsScrollFrame = nil
@@ -210,6 +211,18 @@ addon.ui.CreateStatsTable = function(options)
         return type(data) == "table" and type(data.xpRuns) == "number" and data.xpRuns > 0
     end
 
+    local function HasLevelProgressData(data)
+        return type(data) == "table" and type(data.levelProgressRuns) == "number" and data.levelProgressRuns > 0
+    end
+
+    local function FormatLevelProgress(value)
+        if type(format.LevelProgress) == "function" then
+            return format.LevelProgress(value)
+        end
+
+        return "-"
+    end
+
     local function FormatCharacterName(data)
         if type(data) ~= "table" then
             return ""
@@ -249,6 +262,10 @@ addon.ui.CreateStatsTable = function(options)
             return FormatTableTime(data.averageTime or 0)
         elseif key == "averageXPPerMinute" then
             return HasXPData(data) and FormatNumberWithCommas(data.averageXPPerMinute or 0) or "-"
+        elseif key == "averageLevelsPerMinute" then
+            return HasLevelProgressData(data) and FormatLevelProgress(data.averageLevelsPerMinute) or "-"
+        elseif key == "averageLevelsPerRun" then
+            return HasLevelProgressData(data) and FormatLevelProgress(data.averageLevelsPerRun) or "-"
         elseif key == "fastestTime" then
             return FormatTableTime(data.fastestTime or 0)
         end
@@ -272,13 +289,14 @@ addon.ui.CreateStatsTable = function(options)
         end
 
         if column.dashLast and not HasXPData(data) then
+            if column.key == "averageLevelsPerMinute" or column.key == "averageLevelsPerRun" then
+                return HasLevelProgressData(data) and data[column.key] or nil
+            end
+
             return nil
         end
 
         if column.sortType == "number" then
-            if column.key == "averageXPPerMinute" then
-                return data.averageXPPerMinute
-            end
             return data[column.key]
         end
 

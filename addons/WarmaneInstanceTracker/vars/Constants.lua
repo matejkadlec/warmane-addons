@@ -11,13 +11,12 @@ addon.vars.TABLE_ROW_HEIGHT = 20
 addon.vars.TABLE_COLUMN_SPACING = 6
 addon.vars.TABLE_COLUMNS = {
     { key = "character", label = "Character", width = 90, justify = "LEFT", sortType = "text" },
-    { key = "instanceName", label = "Instance", width = 230, justify = "LEFT", sortType = "text" },
+    { key = "instanceName", label = "Instance", width = 225, justify = "LEFT", sortType = "text" },
     { key = "totalRuns", label = "Total Runs", width = 60, justify = "RIGHT", sortType = "number" },
-    { key = "averageXP", label = "Average XP", width = 85, justify = "RIGHT", sortType = "number", dashLast = true },
     { key = "averageTime", label = "Average Time", width = 85, justify = "RIGHT", sortType = "number" },
-    { key = "fastestTime", label = "Fastest Time", width = 85, justify = "RIGHT", sortType = "number" },
-    { key = "averageXPPerMinute", label = "XP Per Minute", width = 85, justify = "RIGHT", sortType = "number", dashLast = true }
-
+    { key = "fastestTime", label = "Fastest Time", width = 75, justify = "RIGHT", sortType = "number" },
+    { key = "averageLevelsPerMinute", label = "Levels Per Minute", width = 105, justify = "RIGHT", sortType = "number", dashLast = true },
+    { key = "averageLevelsPerRun", label = "Levels Per Run", width = 85, justify = "RIGHT", sortType = "number", dashLast = true }
 }
 addon.vars.FRAME_NAMES = {
     stats = "WITStatsFrame",

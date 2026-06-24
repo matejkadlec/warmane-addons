@@ -6,6 +6,7 @@ local date = date
 local print = print
 local type = type
 local pcall = pcall
+local pairs = pairs
 local tostring = tostring
 local tonumber = tonumber
 local math_floor = math.floor
@@ -57,6 +58,8 @@ local startTime = 0
 local pausedDuration = 0
 local pauseStartedAt = 0
 local xpGained = 0
+local levelProgressGained = 0
+local levelXPByLevel = {}
 local initialLevel = 0
 local xpCheckpoint = 0
 local xpCheckpointMax = 0
@@ -131,6 +134,66 @@ local function IsCurrentRunXPEligible(currentLevel, runXP)
     end
 
     return type(currentLevel) == "number" and currentLevel < GetMaxPlayerLevel()
+end
+
+-- Store the XP bar size for each non-max level touched by a run
+local function CaptureLevelXP(level, maxXP)
+    if type(level) ~= "number" or type(maxXP) ~= "number" or maxXP <= 0 then
+        return
+    end
+
+    local normalizedLevel = math_floor(level)
+    if normalizedLevel <= 0 or normalizedLevel >= GetMaxPlayerLevel() then
+        return
+    end
+
+    levelXPByLevel[normalizedLevel] = math_floor(maxXP + 0.5)
+end
+
+-- Copy level XP metadata so SavedVariables do not keep the mutable live table
+local function CopyLevelXPByLevel()
+    local copy = {}
+    local copied = false
+
+    for level, maxXP in pairs(levelXPByLevel) do
+        if type(level) == "number" and type(maxXP) == "number" and maxXP > 0 then
+            copy[level] = math_floor(maxXP + 0.5)
+            copied = true
+        end
+    end
+
+    return copied and copy or nil
+end
+
+-- Restore level XP metadata from an active-run snapshot after /reload
+local function RestoreLevelXPByLevel(savedLevels)
+    levelXPByLevel = {}
+
+    if type(savedLevels) ~= "table" then
+        return
+    end
+
+    for level, maxXP in pairs(savedLevels) do
+        CaptureLevelXP(level, maxXP)
+    end
+end
+
+-- Keep normalized level values precise to two decimals in saved data
+local function RoundLevelProgress(value)
+    if type(value) ~= "number" or value < 0 then
+        return 0
+    end
+
+    return math_floor((value * 100) + 0.5) / 100
+end
+
+-- Calculate a level-progress rate for one completed run
+local function CalculateLevelsPerMinute(levelsGained, duration)
+    if type(levelsGained) ~= "number" or type(duration) ~= "number" or duration <= 0 then
+        return nil
+    end
+
+    return RoundLevelProgress(levelsGained / (duration / 60))
 end
 
 -- Keep the single OnUpdate script active while any scheduled work is pending
@@ -354,6 +417,7 @@ local function CaptureXPCheckpoint()
     levelCheckpoint = safe.UnitLevel("player") or 1
     xpCheckpoint = safe.UnitXP("player") or 0
     xpCheckpointMax = safe.UnitXPMax("player") or 1
+    CaptureLevelXP(levelCheckpoint, xpCheckpointMax)
 end
 
 -- Reset active tracking values so failed completion never keeps stale state
@@ -365,6 +429,8 @@ local function ResetInstanceTrackingState()
     pausedDuration = 0
     pauseStartedAt = 0
     xpGained = 0
+    levelProgressGained = 0
+    levelXPByLevel = {}
     initialLevel = 0
     xpCheckpoint = 0
     xpCheckpointMax = 0
@@ -454,6 +520,8 @@ local function StartInstanceTracking(resolvedInstanceName, source, startedAt)
     pausedDuration = 0
     pauseStartedAt = 0
     xpGained = 0
+    levelProgressGained = 0
+    levelXPByLevel = {}
     initialLevel = safe.UnitLevel("player") or 1
     mobsKilled = 0
     pendingKillCount = 0
@@ -542,18 +610,47 @@ local function UpdateTrackedXP()
         currentXP = 0
     end
 
+    local currentXPMax = safe.UnitXPMax("player") or 1
+    CaptureLevelXP(currentLevel, currentXPMax)
+
     local gainedSinceCheckpoint = 0
+    local levelProgressSinceCheckpoint = 0
     if currentLevel > levelCheckpoint then
         gainedSinceCheckpoint = (xpCheckpointMax - xpCheckpoint) + currentXP
+
+        if type(xpCheckpointMax) == "number" and xpCheckpointMax > 0 then
+            levelProgressSinceCheckpoint = levelProgressSinceCheckpoint + ((xpCheckpointMax - xpCheckpoint) / xpCheckpointMax)
+        end
+
+        local crossedLevel = levelCheckpoint + 1
+        while crossedLevel < currentLevel and crossedLevel < maxPlayerLevel do
+            local crossedLevelXP = levelXPByLevel[crossedLevel]
+            if type(crossedLevelXP) == "number" and crossedLevelXP > 0 then
+                gainedSinceCheckpoint = gainedSinceCheckpoint + crossedLevelXP
+            end
+            levelProgressSinceCheckpoint = levelProgressSinceCheckpoint + 1
+            crossedLevel = crossedLevel + 1
+        end
+
+        if currentLevel < maxPlayerLevel and type(currentXPMax) == "number" and currentXPMax > 0 then
+            levelProgressSinceCheckpoint = levelProgressSinceCheckpoint + (currentXP / currentXPMax)
+        end
     elseif currentLevel == levelCheckpoint then
         gainedSinceCheckpoint = currentXP - xpCheckpoint
+        if type(xpCheckpointMax) == "number" and xpCheckpointMax > 0 then
+            levelProgressSinceCheckpoint = gainedSinceCheckpoint / xpCheckpointMax
+        end
     end
 
     if type(gainedSinceCheckpoint) ~= "number" or gainedSinceCheckpoint < 0 then
         gainedSinceCheckpoint = 0
     end
+    if type(levelProgressSinceCheckpoint) ~= "number" or levelProgressSinceCheckpoint < 0 then
+        levelProgressSinceCheckpoint = 0
+    end
 
     xpGained = xpGained + gainedSinceCheckpoint
+    levelProgressGained = levelProgressGained + levelProgressSinceCheckpoint
     CaptureXPCheckpoint()
 
     return xpGained, currentLevel, isMaxLevel, reachedMaxLevel
@@ -584,6 +681,8 @@ PersistActiveRun = function(updateXP)
             pausedDuration = pausedDuration,
             pauseStartedAt = pauseStartedAt,
             xpGained = xpGained,
+            levelsGained = RoundLevelProgress(levelProgressGained),
+            levels = CopyLevelXPByLevel(),
             initialLevel = initialLevel,
             xpCheckpoint = xpCheckpoint,
             xpCheckpointMax = xpCheckpointMax,
@@ -640,10 +739,13 @@ TryRestoreActiveRun = function()
     pausedDuration = type(snapshot.pausedDuration) == "number" and snapshot.pausedDuration >= 0 and snapshot.pausedDuration or 0
     pauseStartedAt = type(snapshot.pauseStartedAt) == "number" and snapshot.pauseStartedAt > 0 and snapshot.pauseStartedAt or 0
     xpGained = type(snapshot.xpGained) == "number" and snapshot.xpGained >= 0 and snapshot.xpGained or 0
+    levelProgressGained = type(snapshot.levelsGained) == "number" and snapshot.levelsGained >= 0 and snapshot.levelsGained or 0
+    RestoreLevelXPByLevel(snapshot.levels)
     initialLevel = type(snapshot.initialLevel) == "number" and snapshot.initialLevel > 0 and snapshot.initialLevel or safe.UnitLevel("player") or 1
     xpCheckpoint = type(snapshot.xpCheckpoint) == "number" and snapshot.xpCheckpoint >= 0 and snapshot.xpCheckpoint or safe.UnitXP("player") or 0
     xpCheckpointMax = type(snapshot.xpCheckpointMax) == "number" and snapshot.xpCheckpointMax > 0 and snapshot.xpCheckpointMax or safe.UnitXPMax("player") or 1
     levelCheckpoint = type(snapshot.levelCheckpoint) == "number" and snapshot.levelCheckpoint > 0 and snapshot.levelCheckpoint or safe.UnitLevel("player") or 1
+    CaptureLevelXP(levelCheckpoint, xpCheckpointMax)
     mobsKilled = type(snapshot.mobsKilled) == "number" and snapshot.mobsKilled >= 0 and snapshot.mobsKilled or 0
     isCorpseRunning = false
     isInsideTrackedInstance = true
@@ -854,6 +956,8 @@ local function ProcessInstanceCompletion(saveRun, sendPartySummary)
     local isMaxLevel = currentLevel == maxPlayerLevel
     local reachedMaxLevel = isMaxLevel and initialLevel == maxPlayerLevel - 1
     local xpEligible = IsCurrentRunXPEligible(currentLevel, xpGained)
+    local runLevelsGained = RoundLevelProgress(levelProgressGained)
+    local runLevelsPerMinute = CalculateLevelsPerMinute(runLevelsGained, duration)
 
     if saveRun then
         local instanceData = {
@@ -862,8 +966,11 @@ local function ProcessInstanceCompletion(saveRun, sendPartySummary)
             xpGained = xpGained,
             timestamp = time(),
             character = currentCharacter,
+            initialLevel = initialLevel,
             level = currentLevel,
             xpEligible = xpEligible,
+            levelsGained = runLevelsGained,
+            levels = CopyLevelXPByLevel(),
         }
 
         local saved = utils.SaveInstanceRun(instanceData)
@@ -883,6 +990,8 @@ local function ProcessInstanceCompletion(saveRun, sendPartySummary)
             averageTime = duration,
             fastestTime = duration,
             averageXP = xpGained > 0 and xpGained or nil,
+            averageLevelsPerRun = runLevelsGained,
+            averageLevelsPerMinute = runLevelsPerMinute,
             totalRuns = saveRun and 1 or 0
         }
     end
@@ -907,6 +1016,8 @@ local function ProcessInstanceCompletion(saveRun, sendPartySummary)
         end
 
         print(common.Message("WIT", "XP received", format.Number(xpGained), true))
+        print(common.Message("WIT", "Levels per run", format.LevelProgress(runLevelsGained), true))
+        print(common.Message("WIT", "Levels per minute", runLevelsPerMinute and format.LevelProgress(runLevelsPerMinute) or "-", true))
         if stats.averageXP and xpGained ~= stats.averageXP then
             print(common.Message("WIT", "Average XP received", format.Number(stats.averageXP) ..
                 format.XPDifference(xpGained, stats.averageXP), true))
@@ -950,12 +1061,14 @@ local function ProcessInstanceCompletion(saveRun, sendPartySummary)
 
     -- Never send the completion party summary for max-level characters.
     if sendPartySummary and partyMessageEnabled and not isMaxLevel then
+        local levelsPerMinuteText = runLevelsPerMinute and format.LevelProgress(runLevelsPerMinute) or "n/a"
+        local levelsPerRunText = format.LevelProgress(runLevelsGained)
         local partySummary = string_format(
-            "[WIT] %s completed in %s. XP received: %s. Runs until next level: %s.",
+            "[WIT] %s completed in %s. Levels per minute: %s. Levels per run: %s.",
             instanceName,
             format.Time(duration),
-            format.Number(xpGained),
-            runsTillNextLevelText
+            levelsPerMinuteText,
+            levelsPerRunText
         )
         SendPartyCompletionSummary(partySummary)
     end
@@ -1481,24 +1594,35 @@ function runTracker.PrintStatus()
         COLOR.ORANGE, FormatTableTime(GetElapsedSeconds()), COLOR.YELLOW))
 end
 
--- Update saved table rows for the currently logged-in character
-function runTracker.UpdateCurrentCharacterLevel()
+-- Update saved character level from live player data, optionally with chat feedback
+local function UpdateCurrentCharacterLevel(showMessages)
     local character = UnitName("player")
     if not character or character == "" then
-        print(common.ErrorMessage("WIT", "retrieve current character name"))
+        if showMessages then
+            print(common.ErrorMessage("WIT", "retrieve current character name"))
+        end
         return
     end
 
     local currentLevel = safe.UnitLevel("player")
     local updatedRows = utils.UpdateCharacterLevel(character, currentLevel)
     if updatedRows > 0 then
-        print(common.Message("WIT", "Updated character level", string_format("%s (%d)", character, currentLevel), true))
-        print(common.Message("WIT", "Updated rows", tostring(updatedRows), true))
+        if showMessages then
+            print(common.Message("WIT", "Updated character level", string_format("%s (%d)", character, currentLevel), true))
+            print(common.Message("WIT", "Updated rows", tostring(updatedRows), true))
+        end
         RefreshStatsTableIfOpen()
         return
     end
 
-    print(common.Message("WIT", "No saved rows found for", character, true))
+    if showMessages then
+        print(common.Message("WIT", "No saved rows found for", character, true))
+    end
+end
+
+-- Update saved table rows for the currently logged-in character
+function runTracker.UpdateCurrentCharacterLevel()
+    UpdateCurrentCharacterLevel(true)
 end
 
 -- Start tracking manually from the current party instance
@@ -1632,8 +1756,11 @@ end
 function runTracker.HandleEvent(event, ...)
     if event == "COMBAT_LOG_EVENT_UNFILTERED" then
         HandleCombatLogEvent(...)
-    elseif event == "PLAYER_XP_UPDATE" or event == "PLAYER_LEVEL_UP" then
+    elseif event == "PLAYER_XP_UPDATE" then
         HandleXPUpdate()
+    elseif event == "PLAYER_LEVEL_UP" then
+        HandleXPUpdate()
+        UpdateCurrentCharacterLevel(false)
     elseif event == "PLAYER_DEAD" then
         if HasTrackedRun() and instanceTrackingEnabled then
             isCorpseRunning = true
@@ -1649,6 +1776,9 @@ function runTracker.HandleEvent(event, ...)
             TryRestoreActiveRun()
         end
         RefreshInstanceTrackingContext(event)
+        if event == "PLAYER_ENTERING_WORLD" then
+            UpdateCurrentCharacterLevel(false)
+        end
     elseif event == "PLAYER_LOGOUT" then
         PersistActiveRun(true)
     elseif event == "PARTY_MEMBERS_CHANGED" then
