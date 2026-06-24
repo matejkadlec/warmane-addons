@@ -84,13 +84,7 @@
 				end
 			</OnDragStart>
 			<OnDragStop>
-				if( MBB_Options.AttachToMinimap == 1 ) then
-					MBB_DragFlag = 0;
-				else
-					this:StopMovingOrSizing();
-				end
-				local _,_,_,xpos,ypos = this:GetPoint();
-				MBB_Options.ButtonPos = {xpos,ypos};
+				MBB_OnDragStop();
 			</OnDragStop>
 			<OnUpdate>
 				MBB_OnUpdate(arg1);

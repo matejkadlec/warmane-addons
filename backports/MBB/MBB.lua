@@ -30,8 +30,20 @@ MBB_Buttons = {};
 MBB_Exclude = {};
 MBB_DebugInfo = {};
 MBB_UseEnumerateChildren = {};
+MBB_ValidPoints = {
+	["TOPLEFT"] = 1,
+	["TOP"] = 1,
+	["TOPRIGHT"] = 1,
+	["LEFT"] = 1,
+	["CENTER"] = 1,
+	["RIGHT"] = 1,
+	["BOTTOMLEFT"] = 1,
+	["BOTTOM"] = 1,
+	["BOTTOMRIGHT"] = 1
+};
 MBB_DefaultOptions = {
 	["ButtonPos"] = {-18, -100},
+	["ButtonPoint"] = {"TOPLEFT", "TOPLEFT", -18, -100},
 	["AttachToMinimap"] = 1,
 	["CollapseTimeout"] = 1,
 	["ExpandDirection"] = 1,
@@ -39,9 +51,72 @@ MBB_DefaultOptions = {
 	["AltExpandDirection"] = 4
 };
 
+function MBB_CopyOptionValue(value)
+	if( type(value) ~= "table" ) then
+		return value;
+	end
+
+	local copy = {};
+	for key, childValue in pairs(value) do
+		copy[key] = childValue;
+	end
+	return copy;
+end
+
+function MBB_CopyDefaultOptions()
+	local options = {};
+	for opt,val in pairs(MBB_DefaultOptions) do
+		options[opt] = MBB_CopyOptionValue(val);
+	end
+	return options;
+end
+
+function MBB_IsValidPoint(point)
+	return type(point) == "string" and MBB_ValidPoints[point] == 1;
+end
+
+function MBB_IsValidPosition(position)
+	return type(position) == "table" and type(position[1]) == "number" and type(position[2]) == "number";
+end
+
+function MBB_IsValidButtonPoint(point)
+	return type(point) == "table" and MBB_IsValidPoint(point[1]) and MBB_IsValidPoint(point[2])
+		and type(point[3]) == "number" and type(point[4]) == "number";
+end
+
+function MBB_NormalizeOptions()
+	if( type(MBB_Options) ~= "table" ) then
+		MBB_Options = MBB_CopyDefaultOptions();
+	end
+
+	for opt,val in pairs(MBB_DefaultOptions) do
+		if( MBB_Options[opt] == nil ) then
+			MBB_Debug(opt .. " option set to default: " .. tostring(val));
+			MBB_Options[opt] = MBB_CopyOptionValue(val);
+		else
+			MBB_Debug(opt .. " option exists: " .. tostring(MBB_Options[opt]));
+		end
+	end
+
+	if( MBB_Options.AttachToMinimap ~= 0 and MBB_Options.AttachToMinimap ~= 1 ) then
+		MBB_Options.AttachToMinimap = MBB_DefaultOptions.AttachToMinimap;
+	end
+
+	if( not MBB_IsValidPosition(MBB_Options.ButtonPos) ) then
+		MBB_Options.ButtonPos = MBB_CopyOptionValue(MBB_DefaultOptions.ButtonPos);
+	end
+
+	if( not MBB_IsValidButtonPoint(MBB_Options.ButtonPoint) ) then
+		if( MBB_Options.AttachToMinimap == 1 ) then
+			MBB_Options.ButtonPoint = {"TOPLEFT", "TOPLEFT", MBB_Options.ButtonPos[1], MBB_Options.ButtonPos[2]};
+		else
+			MBB_Options.ButtonPoint = {"CENTER", "CENTER", MBB_Options.ButtonPos[1], MBB_Options.ButtonPos[2]};
+		end
+	end
+end
+
 if(not MBB_Options) then
-	MBB_Options = {};
-	MBB_Options = MBB_DefaultOptions;
+	MBB_Options = MBB_CopyDefaultOptions();
 end
 	
 MBB_Include = {
@@ -237,10 +312,11 @@ function MBB_SlashHandler(cmd)
 		end
 	elseif( cmd == "reset position" ) then
 		MBB_Options.AttachToMinimap = MBB_DefaultOptions.AttachToMinimap;
-		MBB_Options.ButtonPos = MBB_DefaultOptions.ButtonPos;
+		MBB_Options.ButtonPos = MBB_CopyOptionValue(MBB_DefaultOptions.ButtonPos);
+		MBB_Options.ButtonPoint = MBB_CopyOptionValue(MBB_DefaultOptions.ButtonPoint);
 		MBB_SetButtonPosition();
 	elseif( cmd == "reset all" ) then
-		MBB_Options = MBB_DefaultOptions;
+		MBB_Options = MBB_CopyDefaultOptions();
 		for i=1,table.maxn(MBB_Exclude) do
 			MBB_AddButton(MBB_Exclude[i]);
 		end
@@ -323,18 +399,7 @@ end
 
 function MBB_OnEvent()
 	if ( event == "VARIABLES_LOADED" ) then
-		if( MBB_Options ) then
-			for opt,val in pairs(MBB_DefaultOptions) do
-				if( not MBB_Options[opt] ) then
-					MBB_Debug(opt .. " option set to default: " .. tostring(val));
-					MBB_Options[opt] = val;
-				else
-					MBB_Debug(opt .. " option exists: " .. tostring(MBB_Options[opt]));
-				end
-			end
-		else
-			MBB_Options = MBB_DefaultOptions;
-		end
+		MBB_NormalizeOptions();
 		
 		MBB_SetButtonPosition();
 		
@@ -733,10 +798,12 @@ function MBB_OnClick(arg1)
 			local scale = GetCVar("uiScale");]]
 			MBB_Options.AttachToMinimap = 0;
 			MBB_Options.ButtonPos = {0, 0};	--{(xpos/scale)-10, (ypos/scale)-10};
+			MBB_Options.ButtonPoint = {"CENTER", "CENTER", 0, 0};
 			MBB_SetButtonPosition();
 		else
 			MBB_Options.AttachToMinimap = 1;
-			MBB_Options.ButtonPos = MBB_DefaultOptions.ButtonPos;
+			MBB_Options.ButtonPos = MBB_CopyOptionValue(MBB_DefaultOptions.ButtonPos);
+			MBB_Options.ButtonPoint = MBB_CopyOptionValue(MBB_DefaultOptions.ButtonPoint);
 			MBB_SetButtonPosition();
 		end
 	elseif( arg1 and arg1 == "RightButton" ) then
@@ -865,7 +932,12 @@ function MBB_OnUpdate(elapsed)
 
 		local angle = math.deg(math.atan2(ypos,xpos));
 		
-		MBB_MinimapButtonFrame:SetPoint("TOPLEFT", Minimap, "TOPLEFT", 53-(cos(angle)*81), -55+(sin(angle)*81));
+		local buttonX = 53-(cos(angle)*81);
+		local buttonY = -55+(sin(angle)*81);
+		MBB_MinimapButtonFrame:ClearAllPoints();
+		MBB_MinimapButtonFrame:SetPoint("TOPLEFT", Minimap, "TOPLEFT", buttonX, buttonY);
+		MBB_Options.ButtonPos = {buttonX, buttonY};
+		MBB_Options.ButtonPoint = {"TOPLEFT", "TOPLEFT", buttonX, buttonY};
 	end
 	
 	if( MBB_Options.CollapseTimeout and MBB_Options.CollapseTimeout ~= 0 ) then
@@ -879,19 +951,61 @@ function MBB_OnUpdate(elapsed)
 end
 
 function MBB_ResetPosition()
-	MBB_Options.ButtonPos = MBB_DefaultOptions.ButtonPos;
+	MBB_Options.ButtonPos = MBB_CopyOptionValue(MBB_DefaultOptions.ButtonPos);
+	MBB_Options.ButtonPoint = MBB_CopyOptionValue(MBB_DefaultOptions.ButtonPoint);
 	MBB_Options.AttachToMinimap = MBB_DefaultOptions.AttachToMinimap;
 	
 	MBB_SetButtonPosition();
 end
 
+function MBB_SaveButtonPosition()
+	if( not MBB_MinimapButtonFrame or not MBB_MinimapButtonFrame.GetPoint ) then
+		return;
+	end
+
+	local point, _, relativePoint, xpos, ypos = MBB_MinimapButtonFrame:GetPoint();
+	if( type(xpos) ~= "number" or type(ypos) ~= "number" ) then
+		return;
+	end
+
+	if( MBB_Options.AttachToMinimap == 1 ) then
+		MBB_Options.ButtonPos = {xpos, ypos};
+		MBB_Options.ButtonPoint = {"TOPLEFT", "TOPLEFT", xpos, ypos};
+		return;
+	end
+
+	if( not MBB_IsValidPoint(point) ) then
+		point = "CENTER";
+	end
+	if( not MBB_IsValidPoint(relativePoint) ) then
+		relativePoint = point;
+	end
+
+	MBB_Options.ButtonPos = {xpos, ypos};
+	MBB_Options.ButtonPoint = {point, relativePoint, xpos, ypos};
+end
+
+function MBB_OnDragStop()
+	if( MBB_Options.AttachToMinimap == 1 ) then
+		MBB_DragFlag = 0;
+	else
+		MBB_MinimapButtonFrame:StopMovingOrSizing();
+	end
+	MBB_SaveButtonPosition();
+end
+
 function MBB_SetButtonPosition()
+	MBB_NormalizeOptions();
+
 	if( MBB_Options.AttachToMinimap == 1 ) then
 		MBB_MinimapButtonFrame:ClearAllPoints();
 		MBB_MinimapButtonFrame:SetPoint("TOPLEFT", Minimap, "TOPLEFT", MBB_Options.ButtonPos[1], MBB_Options.ButtonPos[2]);
+		MBB_Options.ButtonPoint = {"TOPLEFT", "TOPLEFT", MBB_Options.ButtonPos[1], MBB_Options.ButtonPos[2]};
 	else
+		local buttonPoint = MBB_Options.ButtonPoint;
 		MBB_MinimapButtonFrame:ClearAllPoints();
-		MBB_MinimapButtonFrame:SetPoint("CENTER", UIParent, "CENTER", MBB_Options.ButtonPos[1], MBB_Options.ButtonPos[2]);
+		MBB_MinimapButtonFrame:SetPoint(buttonPoint[1], UIParent, buttonPoint[2], buttonPoint[3], buttonPoint[4]);
+		MBB_Options.ButtonPos = {buttonPoint[3], buttonPoint[4]};
 	end
 end
 
