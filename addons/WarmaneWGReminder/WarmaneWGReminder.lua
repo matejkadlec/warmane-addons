@@ -347,12 +347,10 @@ local function PrintHelp()
     print(string_format("  %s/wwr %s- Print when the next Wintergrasp battle starts|r", COLOR.ORANGE, COLOR.YELLOW))
     print(string_format("  %s/wwr on %s- Enable Wintergrasp reminders|r", COLOR.ORANGE, COLOR.YELLOW))
     print(string_format("  %s/wwr off %s- Disable Wintergrasp reminders|r", COLOR.ORANGE, COLOR.YELLOW))
-    print(string_format("  %s/wwr when %s- Print when the next Wintergrasp battle starts|r", COLOR.ORANGE, COLOR.YELLOW))
     print(string_format("  %s/wwr help %s- Show this help|r", COLOR.ORANGE, COLOR.YELLOW))
-    print(string_format("  %s/wwr -h %s- Short version of /wwr help|r", COLOR.ORANGE, COLOR.YELLOW))
 end
 
--- Handle the /wwr when subcommand
+-- Handle the bare /wwr timer check
 local function HandleWhen()
     local isAvailable, waitTime = QueryWintergraspWaitTime()
     if not isAvailable then
@@ -415,9 +413,7 @@ end
 local SUBCOMMANDS = {
     ["on"] = { handler = EnableAddon, args = 0 },
     ["off"] = { handler = DisableAddon, args = 0 },
-    ["when"] = { handler = HandleWhen, args = 0 },
     ["help"] = { handler = PrintHelp, args = 0 },
-    ["-h"] = { handler = PrintHelp, args = 0 },
 }
 
 -- Register slash command
@@ -426,7 +422,7 @@ SlashCmdList["WWR"] = function(msg)
     -- Normalize slash command input before dispatching to subcommands
     local rawMsg = strtrim(msg or "")
 
-    -- No arguments behave like /wwr when
+    -- No arguments print the next Wintergrasp battle time
     if rawMsg == "" then
         HandleWhen()
         return

@@ -50,7 +50,6 @@ First-party AddOns expose in-game settings under `Interface -> AddOns -> Warmane
   - `Levels Per Run`
 - Character rows include the latest known level in the table, for example `Baladie (42)`
   - WIT updates the saved character level when you level up and when you enter the world on that character
-  - Existing old rows can still be backfilled with `/wit update` while logged into that character
 - Instance names in the table include level ranges where available, for example `Wailing Caverns (15 - 25)`
 - WIT normalizes known alternate dungeon names reported by the client/Warmane, including hub-and-wing names such as `Auchindoun: Sethekk Halls`.
 - Max-level and other no-XP runs are handled safely:
@@ -69,16 +68,13 @@ First-party AddOns expose in-game settings under `Interface -> AddOns -> Warmane
 - Slash commands:
   - `/wit` opens or closes the stats table
   - `/wit on` and `/wit off` enable/disable instance tracking without reloading the UI
-  - `/wit config` opens `Interface -> AddOns -> Warmane AddOns -> Instance Tracker`
-  - `/wit update` updates saved table rows with the current logged-in character's level
-    - This does **not** update offline alts; WoW only exposes the current character's live level
+  - `/wit help` shows help
 - Interface Options panel (`Interface -> AddOns -> Warmane AddOns -> Instance Tracker`) includes:
   - Run statistics buttons: open table, export CSV
   - Current run controls: status, start/end, pause/continue, reset, and live elapsed time
   - User settings: instance tracker, party completion message
   - Table settings: character scope, level-range filter, table size
   - Developer settings: debug printing, debug logging
-- Debug commands (`/wit debug ...`) include `on|off`, `state`, `target`, `simulate "Instance Name" duration xp`, and `log on|off|status|clear`.
 - On completion, can post one summary line to party chat:
   - `[WIT] <instance> completed in <time>. Levels per minute: <value>. Levels per run: <value>.`
 - SavedVariables are split for clarity:
@@ -95,7 +91,7 @@ First-party AddOns expose in-game settings under `Interface -> AddOns -> Warmane
 - Uses the in-game `GetWintergraspWaitTime()` API for accurate battle timing
 - Shows notifications at 30, 15, and 5 minutes before battle
 - Also shows notification right after the battle begins and ends
-- Slash commands `/wwr` and `/wwr when` check time until next battle
+- Slash command `/wwr` checks time until next battle
 - Slash commands `/wwr on` and `/wwr off` enable/disable automatic reminders without reloading the UI
 - Interface Options panel: `Warmane AddOns -> WG Reminder`
 - Type `/wwr help` for a list of available commands
@@ -141,10 +137,9 @@ First-party AddOns expose in-game settings under `Interface -> AddOns -> Warmane
 - Uses Blizzard's assigned healer role when available, with a healer talent/class fallback for manual portal groups
 - Sends `Healer Mana: I'm out of mana!` to group chat with a configurable 60-second default cooldown
 - Enabling the AddOn mid-fight starts a full warning delay before the first low-mana shout
+- Slash command `/whm` shows help
 - Slash commands `/whm on` and `/whm off` enable/disable healer mana warnings without reloading the UI
-- Slash command `/whm party <2|3|5|10|25> <on|off>` enables/disables auto-activation for a group size
-- Slash command `/whm delay <seconds>` changes the saved warning delay between 30 and 180 seconds
-- Slash command `/whm threshold <5|10|15|20|25>` changes the saved mana threshold in 5% steps
+- Slash command `/whm help` shows help
 - Interface Options panel: `Warmane AddOns -> Healer Mana` with enabled, inside/outside location, delay, mana threshold, and group-size auto-activate controls
 
 ### WarmaneHealerProtection
@@ -158,10 +153,9 @@ First-party AddOns expose in-game settings under `Interface -> AddOns -> Warmane
 - Defaults to a 60-second inside-instance delay and 30-second outside-instance delay
 - Defaults to 3 non-boss mobs or 1 boss mob inside instances, and 1 non-boss mob or 1 boss mob outside instances
 - Enabling the AddOn mid-fight starts a full warning delay before the first aggro shout
+- Slash command `/whp` shows help
 - Slash commands `/whp on` and `/whp off` enable/disable healer protection warnings without reloading the UI
-- Slash command `/whp party <2|3|5|10|25> <on|off>` enables/disables auto-activation for a group size
-- Slash command `/whp` shows help and `/whp delay <seconds>` changes the saved warning delay between 5 and 120 seconds
-- Slash commands `/whp min <1|2|3|5|10>` and `/whp min -b <1|2|3>` set non-boss and boss aggro count thresholds
+- Slash command `/whp help` shows help
 - Interface Options panel: `Warmane AddOns -> Healer Protection` with enabled, inside/outside location, separate inside/outside delay and aggro-count threshold, and group-size auto-activate controls
 - Checks visible hostile targets and recent direct combat-log hits to detect mobs directly attacking you, without treating boss spell casts alone as aggro
 

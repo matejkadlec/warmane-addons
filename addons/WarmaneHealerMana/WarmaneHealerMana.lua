@@ -4,7 +4,6 @@ local addonName, addon = ...
 local getglobal = getglobal
 local print = print
 local pcall = pcall
-local tonumber = tonumber
 local type = type
 local math_floor = math.floor
 local string_format = string.format
@@ -202,11 +201,6 @@ local function SetSavedLocationEnabled(location, enabled)
     else
         SetSavedAddonEnabled(false, false)
     end
-end
-
--- Return whether a party size can be configured for auto-activation
-local function IsSupportedPartySize(partySize)
-    return DEFAULT_AUTO_ACTIVATE_PARTY_SIZES[partySize] ~= nil
 end
 
 -- Read one persisted auto-activation party-size toggle safely
@@ -468,158 +462,19 @@ end
 -- Print slash command help text
 local function PrintHelp()
     print(FormatMessage(ADDON_PREFIX, "Available commands:"))
+    print("  |cFFFF8000/whm |cFFFFFF00- Show this help|r")
     print("  |cFFFF8000/whm on |cFFFFFF00- Enable healer mana warnings|r")
     print("  |cFFFF8000/whm off |cFFFFFF00- Disable healer mana warnings|r")
-    print("  |cFFFF8000/whm party <2|3|5|10|25> <on|off> |cFFFFFF00- Enable/disable auto-activate for a party size|r")
     print("  |cFFFF8000/whm help |cFFFFFF00- Show this help|r")
-    print("  |cFFFF8000/whm delay |cFFFFFF00- Show the current warning delay|r")
-    print("  |cFFFF8000/whm delay <seconds> |cFFFFFF00- Set the warning delay (30-180)|r")
-    print("  |cFFFF8000/whm threshold |cFFFFFF00- Show the current mana threshold|r")
-    print("  |cFFFF8000/whm threshold <5|10|15|20|25> |cFFFFFF00- Set the mana threshold percent|r")
-end
-
--- Print the currently active saved delay
-local function PrintDelay()
-    print(FormatMessage(ADDON_PREFIX, "Current warning delay", tostring(GetAlertDelay())))
-end
-
--- Print the currently active saved mana threshold
-local function PrintThreshold()
-    print(FormatMessage(ADDON_PREFIX, "Current mana threshold", GetManaThreshold() .. "%"))
-end
-
--- Print the saved auto-activation state for one party size
-local function PrintAutoActivatePartySize(partySize, enabled)
-    print(FormatMessage(ADDON_PREFIX, string_format("%s%d%s party size auto-activate %s.",
-        COLOR.ORANGE, partySize, COLOR.YELLOW, enabled and "on" or "off")))
-end
-
--- Parse one integer value from slash command input
-local function ParseIntegerArgument(rawArg)
-    local trimmedArg = strtrim(rawArg or "")
-    if trimmedArg == "" then
-        return nil
-    end
-
-    if not trimmedArg:match("^%-?%d+$") then
-        return nil
-    end
-
-    local parsedValue = tonumber(trimmedArg)
-    if type(parsedValue) ~= "number" or parsedValue ~= math_floor(parsedValue) then
-        return nil
-    end
-
-    return parsedValue
-end
-
--- Handle /whm delay and /whm delay <seconds>
-local function HandleDelay(args)
-    local trimmedArgs = strtrim(args or "")
-    if trimmedArgs == "" then
-        PrintDelay()
-        return
-    end
-
-    local firstArg, extraArg = strsplit(" ", trimmedArgs, 2)
-    extraArg = strtrim(extraArg or "")
-
-    if extraArg ~= "" then
-        print(FormatErrorMessage(ADDON_PREFIX,
-            "execute command. Wrong number of arguments for 'delay' (expected 1)"))
-        return
-    end
-
-    local seconds = ParseIntegerArgument(firstArg)
-    if not seconds then
-        print(FormatErrorMessage(ADDON_PREFIX,
-            "execute command. Invalid argument for 'delay' (expected seconds from 30 to 180)"))
-        return
-    end
-
-    if seconds < MIN_ALERT_DELAY or seconds > MAX_ALERT_DELAY then
-        print(FormatErrorMessage(ADDON_PREFIX,
-            "execute command. Invalid argument for 'delay' (expected seconds from 30 to 180)"))
-        return
-    end
-
-    SetAlertDelay(seconds)
-    print(FormatMessage(ADDON_PREFIX, "Warning delay set to", tostring(seconds)))
-end
-
--- Handle /whm threshold and /whm threshold <5|10|15|20|25>
-local function HandleThreshold(args)
-    local trimmedArgs = strtrim(args or "")
-    if trimmedArgs == "" then
-        PrintThreshold()
-        return
-    end
-
-    local firstArg, extraArg = strsplit(" ", trimmedArgs, 2)
-    extraArg = strtrim(extraArg or "")
-
-    if extraArg ~= "" then
-        print(FormatErrorMessage(ADDON_PREFIX,
-            "execute command. Wrong number of arguments for 'threshold' (expected 1)"))
-        return
-    end
-
-    local threshold = ParseIntegerArgument(firstArg)
-    if not threshold then
-        print(FormatErrorMessage(ADDON_PREFIX,
-            "execute command. Invalid argument for 'threshold' (expected 5, 10, 15, 20, or 25)"))
-        return
-    end
-
-    if not IsValidManaThreshold(threshold) then
-        print(FormatErrorMessage(ADDON_PREFIX,
-            "execute command. Invalid argument for 'threshold' (expected 5, 10, 15, 20, or 25)"))
-        return
-    end
-
-    SetManaThreshold(threshold)
-    print(FormatMessage(ADDON_PREFIX, "Mana threshold set to", threshold .. "%"))
 end
 
 -- Enable or disable auto-activation for one supported party size
 local function SetAutoActivatePartySize(partySize, enabled)
     SetSavedAutoActivatePartySize(partySize, enabled)
-    PrintAutoActivatePartySize(partySize, enabled)
 
     if RefreshInterfaceOptions then
         RefreshInterfaceOptions()
     end
-end
-
--- Handle /whm party <2|3|5|10|25> <on|off>
-local function HandleParty(args)
-    local trimmedArgs = strtrim(args or "")
-    local sizeArg, remainingArgs = strsplit(" ", trimmedArgs, 2)
-    remainingArgs = strtrim(remainingArgs or "")
-    local stateArg, extraArg = strsplit(" ", remainingArgs, 2)
-    extraArg = strtrim(extraArg or "")
-
-    if trimmedArgs == "" or remainingArgs == "" or extraArg ~= "" then
-        print(FormatErrorMessage(ADDON_PREFIX,
-            "execute command. Wrong number of arguments for 'party' (expected 2)"))
-        return
-    end
-
-    local partySize = ParseIntegerArgument(sizeArg)
-    if not partySize or not IsSupportedPartySize(partySize) then
-        print(FormatErrorMessage(ADDON_PREFIX,
-            "execute command. Invalid argument for 'party' (expected party size 2, 3, 5, 10, or 25)"))
-        return
-    end
-
-    local normalizedState = string_lower(stateArg or "")
-    if normalizedState ~= "on" and normalizedState ~= "off" then
-        print(FormatErrorMessage(ADDON_PREFIX,
-            "execute command. Invalid argument for 'party' (expected on or off)"))
-        return
-    end
-
-    SetAutoActivatePartySize(partySize, normalizedState == "on")
 end
 
 -- Enable or disable healer mana warnings without reloading the UI
@@ -670,10 +525,7 @@ end
 local SUBCOMMANDS = {
     ["on"] = { handler = EnableAddon, args = 0 },
     ["off"] = { handler = DisableAddon, args = 0 },
-    ["party"] = { handler = HandleParty, args = 2 },
     ["help"] = { handler = PrintHelp, args = 0 },
-    ["delay"] = { handler = HandleDelay, args = 1 },
-    ["threshold"] = { handler = HandleThreshold, args = 1 }
 }
 
 -- Register slash command parser following Blizzard pattern
@@ -905,7 +757,6 @@ local function RegisterInterfaceOptions()
         if not refreshingInterfaceOptions then
             SetAlertDelay(roundedValue)
             lastAlertAt = -GetAlertDelay()
-            print(FormatMessage(ADDON_PREFIX, "Warning delay set to", tostring(roundedValue)))
         end
     end)
 
@@ -936,7 +787,6 @@ local function RegisterInterfaceOptions()
         thresholdValueText:SetText(roundedValue .. "%")
         if not refreshingInterfaceOptions then
             SetManaThreshold(roundedValue)
-            print(FormatMessage(ADDON_PREFIX, "Mana threshold set to", roundedValue .. "%"))
         end
     end)
 

@@ -1712,7 +1712,7 @@ end
 -- Pause current run and freeze all tracked counters
 function runTracker.PauseManual()
     if state == STATE_PAUSED then
-        print(common.Message("WIT", "The instance run is already paused. To continue tracking, run /wit continue."))
+        print(common.Message("WIT", "The instance run is already paused. Use the Interface Options run controls to continue tracking."))
         return
     end
 

@@ -131,10 +131,12 @@
 - Command name is the AddOn shortname in lowercase (e.g. `/wwr`, `/wit`, `/whm`)
 - Typing `/cmd` with no arguments shows help (list of available subcommands)
   - Exception: `/wit` with no arguments opens or closes the stats table; `/wit help` shows help
-  - Exception: `/wwr` with no arguments behaves like `/wwr when`
+  - Exception: `/wwr` with no arguments prints when the next Wintergrasp battle starts
 - `help` subcommand also shows the same help output
 - All first-party slash commands include `on` and `off` subcommands that enable/disable the AddOn without requiring a UI reload
-- In help output, `on` and `off` are listed immediately after the bare `/cmd` entry when that entry is shown, otherwise before other subcommands
+- First-party slash commands should stay intentionally small: bare `/cmd`, `/cmd on`, `/cmd off`, and `/cmd help`
+- Detailed settings belong in Interface Options, not slash subcommands
+- In help output, `on` and `off` are listed immediately after the bare `/cmd` entry
 - Help format: one line per subcommand, indented with two spaces:
   - `  |cFFFF8000/cmd subcommand |cFFFFFF00- Description of the subcommand|r`
 - Unknown subcommand → error: `"find subcommand 'X'. Use /cmd help to see available commands"`
@@ -143,12 +145,12 @@
 - Input is trimmed and lowercased before command lookup; preserve raw argument text where case or spacing matters, such as quoted instance names
 - Define subcommands in a `SUBCOMMANDS` table with `handler` and `args` fields
 - Current first-party slash commands:
-  - `/wit`: bare command opens/closes stats table; `on`, `off`, `config` (opens `Interface -> AddOns -> Warmane AddOns -> Instance Tracker`), `status`, `update`, `start`, `-s`, `end`, `end -s`, `-e`, `reset`, `pause`, `-p`, `continue`, `-c`, `debug`, `help`, `-h`
-  - `/wwr`: bare command behaves like `when`; `on`, `off`, `when`, `help`, `-h`
+  - `/wit`: bare command opens/closes stats table; `on`, `off`, `help`
+  - `/wwr`: bare command prints when the next Wintergrasp battle starts; `on`, `off`, `help`
   - `/wcc`: bare command behaves like `help`; `on`, `off`, `help`
   - `/wta`: bare command behaves like `help`; `on`, `off`, `help`
-  - `/whm`: `on`, `off`, `party <2|3|5|10|25> <on|off>`, `help`, `delay`, `delay <seconds>`, `threshold`, `threshold <5|10|15|20|25>`
-  - `/whp`: `on`, `off`, `party <2|3|5|10|25> <on|off>`, `help`, `delay`, `delay <seconds>`, `min`, `min <1|2|3|5|10>`, `min -b <1|2|3>`
+  - `/whm`: bare command behaves like `help`; `on`, `off`, `help`
+  - `/whp`: bare command behaves like `help`; `on`, `off`, `help`
   - `/wna`: bare command behaves like `help`; `on`, `off`, `help`
 
 ---

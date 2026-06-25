@@ -31,9 +31,9 @@ local RefreshConfigCheckboxes
 local RefreshStatsTableIfOpen
 local UpdateSpecialFrameEscOrder
 local SetInstanceTrackingWithMessage
-local SetPartyMessageWithMessage
-local SetDebugPrintingWithMessage
-local SetDebugLoggingWithMessage
+local SetPartyMessageEnabled
+local SetDebugPrintingEnabled
+local SetDebugLoggingEnabled
 
 -- Keep Esc behavior classic by delegating ordering to the dedicated UI module
 UpdateSpecialFrameEscOrder = function()
@@ -59,34 +59,31 @@ SetInstanceTrackingWithMessage = function(enabled)
     print(common.Message("WIT", ADDON_FULL_NAME .. " " .. (enabled and "enabled" or "disabled") .. "."))
 end
 
--- Toggle party completion messages with user-facing chat feedback
-SetPartyMessageWithMessage = function(enabled)
+-- Toggle party completion messages silently from the settings UI
+SetPartyMessageEnabled = function(enabled)
     if type(runTracker.IsPartyMessageEnabled) == "function" and runTracker.IsPartyMessageEnabled() == enabled then
         return
     end
 
     runTracker.SetPartyMessageEnabled(enabled)
-    print(common.Message("WIT", "Party message", enabled and "enabled." or "disabled."))
 end
 
--- Toggle boss/combat debug printing with user-facing chat feedback
-SetDebugPrintingWithMessage = function(enabled)
+-- Toggle boss/combat debug printing silently from the settings UI
+SetDebugPrintingEnabled = function(enabled)
     if type(runTracker.IsDebugPrintingEnabled) == "function" and runTracker.IsDebugPrintingEnabled() == enabled then
         return
     end
 
     runTracker.SetDebugPrintingEnabled(enabled)
-    print(common.Message("WIT", "Debug printing", enabled and "enabled." or "disabled."))
 end
 
--- Toggle persisted debug logging with user-facing chat feedback
-SetDebugLoggingWithMessage = function(enabled)
+-- Toggle persisted debug logging silently from the settings UI
+SetDebugLoggingEnabled = function(enabled)
     if type(runTracker.IsDebugLoggingEnabled) == "function" and runTracker.IsDebugLoggingEnabled() == enabled then
         return
     end
 
     runTracker.SetDebugLoggingEnabled(enabled)
-    print(common.Message("WIT", "Debug logging", enabled and "enabled." or "disabled."))
 end
 
 -- Build UI controllers once and inject callbacks back into tracker logic
@@ -97,9 +94,9 @@ local function EnsureUIControllers()
                 return runTracker.GetSettingsState()
             end,
             onSetInstanceTracking = SetInstanceTrackingWithMessage,
-            onSetPartyMessage = SetPartyMessageWithMessage,
-            onSetDebugPrinting = SetDebugPrintingWithMessage,
-            onSetDebugLogging = SetDebugLoggingWithMessage,
+            onSetPartyMessage = SetPartyMessageEnabled,
+            onSetDebugPrinting = SetDebugPrintingEnabled,
+            onSetDebugLogging = SetDebugLoggingEnabled,
             onVisibilityChanged = UpdateSpecialFrameEscOrder
         })
     end
@@ -156,9 +153,9 @@ local function EnsureUIControllers()
                 runTracker.ResetManual()
             end,
             onSetInstanceTracking = SetInstanceTrackingWithMessage,
-            onSetPartyMessage = SetPartyMessageWithMessage,
-            onSetDebugPrinting = SetDebugPrintingWithMessage,
-            onSetDebugLogging = SetDebugLoggingWithMessage,
+            onSetPartyMessage = SetPartyMessageEnabled,
+            onSetDebugPrinting = SetDebugPrintingEnabled,
+            onSetDebugLogging = SetDebugLoggingEnabled,
             onSetStatsCharacterFilterMode = function(mode)
                 runTracker.SetStatsCharacterFilterMode(mode)
             end,

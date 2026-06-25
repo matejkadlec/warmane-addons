@@ -208,20 +208,6 @@ local function IsValueInOptions(value, options)
     return false
 end
 
--- Return a friendly slash-help list for one set of numeric options
-local function FormatNumericOptions(options)
-    local formattedOptions = ""
-
-    for i = 1, #options do
-        if i > 1 then
-            formattedOptions = formattedOptions .. ", "
-        end
-        formattedOptions = formattedOptions .. tostring(options[i])
-    end
-
-    return formattedOptions
-end
-
 -- Return whether one non-boss aggro threshold is supported
 local function IsValidMinNonBossAggroMobs(value)
     return IsValueInOptions(value, MIN_NON_BOSS_AGGRO_MOB_OPTIONS)
@@ -345,11 +331,6 @@ local function SetSavedLocationEnabled(location, enabled)
     else
         SetSavedAddonEnabled(false, false)
     end
-end
-
--- Return whether a party size can be configured for auto-activation
-local function IsSupportedPartySize(partySize)
-    return DEFAULT_AUTO_ACTIVATE_PARTY_SIZES[partySize] ~= nil
 end
 
 -- Read one persisted auto-activation party-size toggle safely
@@ -923,156 +904,28 @@ end
 -- Print slash command help text
 local function PrintHelp()
     print(FormatMessage(ADDON_PREFIX, "Available commands:"))
+    print("  |cFFFF8000/whp |cFFFFFF00- Show this help|r")
     print("  |cFFFF8000/whp on |cFFFFFF00- Enable healer protection warnings|r")
     print("  |cFFFF8000/whp off |cFFFFFF00- Disable healer protection warnings|r")
-    print("  |cFFFF8000/whp party <2|3|5|10|25> <on|off> |cFFFFFF00- Enable/disable auto-activate for a party size|r")
     print("  |cFFFF8000/whp help |cFFFFFF00- Show this help|r")
-    print("  |cFFFF8000/whp delay |cFFFFFF00- Show the current warning delay|r")
-    print("  |cFFFF8000/whp delay <seconds> |cFFFFFF00- Set the warning delay (5-120)|r")
-    print("  |cFFFF8000/whp min |cFFFFFF00- Show the current minimum aggro counts|r")
-    print("  |cFFFF8000/whp min <1|2|3|5|10> |cFFFFFF00- Set minimum aggroed non-boss mobs|r")
-    print("  |cFFFF8000/whp min -b <1|2|3> |cFFFFFF00- Set minimum aggroed boss mobs|r")
 end
 
--- Print the currently active saved delay
-local function PrintDelay()
-    print(FormatMessage(ADDON_PREFIX, "Current inside-instance warning delay", tostring(GetAlertDelay("inside"))))
-end
-
--- Print the currently active saved aggro thresholds
-local function PrintMinAggroMobs()
-    print(FormatMessage(ADDON_PREFIX, "Current inside-instance minimum aggroed non-boss mobs", tostring(GetMinNonBossAggroMobs("inside"))))
-    print(FormatMessage(ADDON_PREFIX, "Current inside-instance minimum aggroed boss mobs", tostring(GetMinBossAggroMobs("inside"))))
-end
-
--- Print the saved auto-activation state for one party size
-local function PrintAutoActivatePartySize(partySize, enabled)
-    print(FormatMessage(ADDON_PREFIX, string_format("%s%d%s party size auto-activate %s.",
-        COLOR.ORANGE, partySize, COLOR.YELLOW, enabled and "on" or "off")))
-end
-
--- Persist and print one non-boss aggro threshold
+-- Persist one non-boss aggro threshold from the settings UI
 local function UpdateMinNonBossAggroMobs(value, location)
     SetMinNonBossAggroMobs(value, location)
-    print(FormatMessage(ADDON_PREFIX, string_format("%s minimum aggroed non-boss mobs set to",
-        location == "outside" and "Outside-instance" or "Inside-instance"), tostring(value)))
 
     if RefreshInterfaceOptions then
         RefreshInterfaceOptions()
     end
 end
 
--- Persist and print one boss aggro threshold
+-- Persist one boss aggro threshold from the settings UI
 local function UpdateMinBossAggroMobs(value, location)
     SetMinBossAggroMobs(value, location)
-    print(FormatMessage(ADDON_PREFIX, string_format("%s minimum aggroed boss mobs set to",
-        location == "outside" and "Outside-instance" or "Inside-instance"), tostring(value)))
 
     if RefreshInterfaceOptions then
         RefreshInterfaceOptions()
     end
-end
-
--- Parse one integer value from slash command input
-local function ParseIntegerArgument(rawArg)
-    local trimmedArg = strtrim(rawArg or "")
-    if trimmedArg == "" then
-        return nil
-    end
-
-    if not trimmedArg:match("^%-?%d+$") then
-        return nil
-    end
-
-    local parsedValue = tonumber(trimmedArg)
-    if type(parsedValue) ~= "number" or parsedValue ~= math_floor(parsedValue) then
-        return nil
-    end
-
-    return parsedValue
-end
-
--- Handle /whp delay and /whp delay <seconds>
-local function HandleDelay(args)
-    local trimmedArgs = strtrim(args or "")
-    if trimmedArgs == "" then
-        PrintDelay()
-        return
-    end
-
-    local firstArg, extraArg = strsplit(" ", trimmedArgs, 2)
-    extraArg = strtrim(extraArg or "")
-
-    if extraArg ~= "" then
-        print(FormatErrorMessage(ADDON_PREFIX,
-            "execute command. Wrong number of arguments for 'delay' (expected 1)"))
-        return
-    end
-
-    local seconds = ParseIntegerArgument(firstArg)
-    if not seconds then
-        print(FormatErrorMessage(ADDON_PREFIX,
-            "execute command. Invalid argument for 'delay' (expected seconds from 5 to 120)"))
-        return
-    end
-
-    if seconds < MIN_ALERT_DELAY or seconds > MAX_ALERT_DELAY then
-        print(FormatErrorMessage(ADDON_PREFIX,
-            "execute command. Invalid argument for 'delay' (expected seconds from 5 to 120)"))
-        return
-    end
-
-    SetAlertDelay(seconds, "inside")
-    print(FormatMessage(ADDON_PREFIX, "Inside-instance warning delay set to", tostring(seconds)))
-end
-
--- Handle /whp min, /whp min <number>, and /whp min -b <number>
-local function HandleMin(args)
-    local trimmedArgs = strtrim(args or "")
-    if trimmedArgs == "" then
-        PrintMinAggroMobs()
-        return
-    end
-
-    local firstArg, remainingArgs = strsplit(" ", trimmedArgs, 2)
-    remainingArgs = strtrim(remainingArgs or "")
-
-    if firstArg == "-b" or firstArg == "-boss" then
-        local bossArg, extraArg = strsplit(" ", remainingArgs, 2)
-        extraArg = strtrim(extraArg or "")
-        if remainingArgs == "" or extraArg ~= "" then
-            print(FormatErrorMessage(ADDON_PREFIX,
-                "execute command. Wrong number of arguments for 'min' (expected 1 or 2)"))
-            return
-        end
-
-        local bossCount = ParseIntegerArgument(bossArg)
-        if not IsValidMinBossAggroMobs(bossCount) then
-            print(FormatErrorMessage(ADDON_PREFIX, string_format(
-                "execute command. Invalid argument for 'min -b' (expected boss count %s)",
-                FormatNumericOptions(MIN_BOSS_AGGRO_MOB_OPTIONS))))
-            return
-        end
-
-        UpdateMinBossAggroMobs(bossCount, "inside")
-        return
-    end
-
-    if remainingArgs ~= "" then
-        print(FormatErrorMessage(ADDON_PREFIX,
-            "execute command. Wrong number of arguments for 'min' (expected 1 or 2)"))
-        return
-    end
-
-    local nonBossCount = ParseIntegerArgument(firstArg)
-    if not IsValidMinNonBossAggroMobs(nonBossCount) then
-        print(FormatErrorMessage(ADDON_PREFIX, string_format(
-            "execute command. Invalid argument for 'min' (expected non-boss count %s)",
-            FormatNumericOptions(MIN_NON_BOSS_AGGRO_MOB_OPTIONS))))
-        return
-    end
-
-    UpdateMinNonBossAggroMobs(nonBossCount, "inside")
 end
 
 -- Enable or disable auto-activation for one supported party size
@@ -1081,42 +934,10 @@ local function SetAutoActivatePartySize(partySize, enabled)
     if not enabled and GetCurrentPartySize() == partySize then
         ResetAggroState()
     end
-    PrintAutoActivatePartySize(partySize, enabled)
 
     if RefreshInterfaceOptions then
         RefreshInterfaceOptions()
     end
-end
-
--- Handle /whp party <2|3|5|10|25> <on|off>
-local function HandleParty(args)
-    local trimmedArgs = strtrim(args or "")
-    local sizeArg, remainingArgs = strsplit(" ", trimmedArgs, 2)
-    remainingArgs = strtrim(remainingArgs or "")
-    local stateArg, extraArg = strsplit(" ", remainingArgs, 2)
-    extraArg = strtrim(extraArg or "")
-
-    if trimmedArgs == "" or remainingArgs == "" or extraArg ~= "" then
-        print(FormatErrorMessage(ADDON_PREFIX,
-            "execute command. Wrong number of arguments for 'party' (expected 2)"))
-        return
-    end
-
-    local partySize = ParseIntegerArgument(sizeArg)
-    if not partySize or not IsSupportedPartySize(partySize) then
-        print(FormatErrorMessage(ADDON_PREFIX,
-            "execute command. Invalid argument for 'party' (expected party size 2, 3, 5, 10, or 25)"))
-        return
-    end
-
-    local normalizedState = string_lower(stateArg or "")
-    if normalizedState ~= "on" and normalizedState ~= "off" then
-        print(FormatErrorMessage(ADDON_PREFIX,
-            "execute command. Invalid argument for 'party' (expected on or off)"))
-        return
-    end
-
-    SetAutoActivatePartySize(partySize, normalizedState == "on")
 end
 
 -- Enable or disable healer protection warnings without reloading the UI
@@ -1171,10 +992,7 @@ end
 local SUBCOMMANDS = {
     ["on"] = { handler = EnableAddon, args = 0 },
     ["off"] = { handler = DisableAddon, args = 0 },
-    ["party"] = { handler = HandleParty, args = 2 },
     ["help"] = { handler = PrintHelp, args = 0 },
-    ["delay"] = { handler = HandleDelay, args = 1 },
-    ["min"] = { handler = HandleMin, args = 2 }
 }
 
 -- Register slash command parser following Blizzard pattern
@@ -1522,7 +1340,6 @@ local function RegisterInterfaceOptions()
         if not refreshingInterfaceOptions then
             SetAlertDelay(roundedValue, "inside")
             lastAlertAt = -GetAlertDelay("inside")
-            print(FormatMessage(ADDON_PREFIX, "Inside-instance warning delay set to", tostring(roundedValue)))
         end
     end)
 
@@ -1576,7 +1393,6 @@ local function RegisterInterfaceOptions()
         if not refreshingInterfaceOptions then
             SetAlertDelay(roundedValue, "outside")
             lastAlertAt = -GetAlertDelay("outside")
-            print(FormatMessage(ADDON_PREFIX, "Outside-instance warning delay set to", tostring(roundedValue)))
         end
     end)
 
