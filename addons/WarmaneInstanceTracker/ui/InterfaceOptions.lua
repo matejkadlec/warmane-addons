@@ -154,7 +154,7 @@ addon.ui.CreateInterfaceOptions = function(options)
 
         local hasRun = state.hasRun == true
         currentRunText:SetText("Current run: " .. (hasRun and state.instanceName or "No active run"))
-        elapsedText:SetText("Time elapsed: " .. FormatElapsed(state.elapsedSeconds))
+        elapsedText:SetText("Time Elapsed: " .. FormatElapsed(state.elapsedSeconds))
         startEndButton:SetText(hasRun and "End" or "Start")
         pauseContinueButton:SetText(state.isPaused and "Continue" or "Pause")
 
@@ -211,14 +211,14 @@ addon.ui.CreateInterfaceOptions = function(options)
     end
 
     local function CreateHeader(parent, text, y)
-        local header = parent:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+        local header = parent:CreateFontString(nil, "ARTWORK", "GameFontNormalMed3")
         header:SetPoint("TOPLEFT", parent, "TOPLEFT", 18, y)
         header:SetText(text)
         return header
     end
 
     local function CreateLabel(parent, text, x, y)
-        local label = parent:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
+        local label = parent:CreateFontString(nil, "ARTWORK", "GameFontNormal")
         label:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
         label:SetText(text)
         return label
@@ -300,21 +300,20 @@ addon.ui.CreateInterfaceOptions = function(options)
     title:SetPoint("TOPLEFT", instancePanel, "TOPLEFT", 16, -16)
     title:SetText("Warmane Instance Tracker")
 
-    CreateHeader(instancePanel, "Run statistics", -52)
+    CreateHeader(instancePanel, "Run Statistics", -52)
     CreateButton(instancePanel, "WITInterfaceOptionsOpenStatsButton", "Open Run Statistics", 18, -76, 150, options.openStatsTable)
     CreateButton(instancePanel, "WITInterfaceOptionsExportStatsButton", "Export Run Statistics", 184, -76, 160, options.exportStatsTable)
 
-    CreateHeader(instancePanel, "Current run", -114)
     currentRunText = instancePanel:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
-    currentRunText:SetPoint("TOPLEFT", instancePanel, "TOPLEFT", 18, -138)
+    currentRunText:SetPoint("TOPLEFT", instancePanel, "TOPLEFT", 18, -120)
     currentRunText:SetText("Current run: No active run")
 
     elapsedText = instancePanel:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
-    elapsedText:SetPoint("TOPLEFT", instancePanel, "TOPLEFT", 18, -158)
-    elapsedText:SetText("Time elapsed: 0 sec")
+    elapsedText:SetPoint("TOPLEFT", instancePanel, "TOPLEFT", 18, -140)
+    elapsedText:SetText("Time Elapsed: 0 sec")
 
-    statusButton = CreateButton(instancePanel, "WITInterfaceOptionsStatusButton", "Status", 18, -184, 78, options.printStatus)
-    startEndButton = CreateButton(instancePanel, "WITInterfaceOptionsStartEndButton", "Start", 104, -184, 78, function()
+    statusButton = CreateButton(instancePanel, "WITInterfaceOptionsStatusButton", "Status", 18, -166, 78, options.printStatus)
+    startEndButton = CreateButton(instancePanel, "WITInterfaceOptionsStartEndButton", "Start", 104, -166, 78, function()
         local state = type(options.getRunControlState) == "function" and options.getRunControlState() or {}
         if state and state.hasRun then
             if type(options.endRun) == "function" then
@@ -324,7 +323,7 @@ addon.ui.CreateInterfaceOptions = function(options)
             options.startRun()
         end
     end)
-    pauseContinueButton = CreateButton(instancePanel, "WITInterfaceOptionsPauseContinueButton", "Pause", 190, -184, 98, function()
+    pauseContinueButton = CreateButton(instancePanel, "WITInterfaceOptionsPauseContinueButton", "Pause", 190, -166, 98, function()
         local state = type(options.getRunControlState) == "function" and options.getRunControlState() or {}
         if state and state.isPaused then
             if type(options.continueRun) == "function" then
@@ -334,40 +333,40 @@ addon.ui.CreateInterfaceOptions = function(options)
             options.pauseRun()
         end
     end)
-    resetButton = CreateButton(instancePanel, "WITInterfaceOptionsResetButton", "Reset", 296, -184, 78, options.resetRun)
+    resetButton = CreateButton(instancePanel, "WITInterfaceOptionsResetButton", "Reset", 296, -166, 78, options.resetRun)
 
-    CreateHeader(instancePanel, "User settings", -230)
+    CreateHeader(instancePanel, "User Settings", -212)
     checkboxes.enableInstanceTracking = CreateCheckbox(
         instancePanel,
         "WITInterfaceOptionsEnableInstanceTracking",
         "Enable instance tracker",
-        -254,
+        -236,
         options.onSetInstanceTracking
     )
     checkboxes.enablePartyMessage = CreateCheckbox(
         instancePanel,
         "WITInterfaceOptionsEnablePartyMessage",
         "Enable party message",
-        -282,
+        -264,
         options.onSetPartyMessage
     )
 
-    CreateHeader(instancePanel, "Table settings", -326)
-    CreateLabel(instancePanel, "Show characters", 18, -352)
+    CreateHeader(instancePanel, "Table Settings", -308)
+    CreateLabel(instancePanel, "Show characters", 18, -334)
     dropdowns.characterFilter = CreateFrame("Frame", "WITInterfaceOptionsCharacterFilterDropDown", instancePanel, "UIDropDownMenuTemplate")
-    dropdowns.characterFilter:SetPoint("TOPLEFT", instancePanel, "TOPLEFT", 128, -344)
+    dropdowns.characterFilter:SetPoint("TOPLEFT", instancePanel, "TOPLEFT", 128, -326)
     UIDropDownMenu_SetWidth(dropdowns.characterFilter, 150)
     UIDropDownMenu_Initialize(dropdowns.characterFilter, InitializeCharacterFilterDropdown)
 
-    CreateLabel(instancePanel, "Level range", 18, -386)
+    CreateLabel(instancePanel, "Level range", 18, -368)
     dropdowns.levelRange = CreateFrame("Frame", "WITInterfaceOptionsLevelRangeDropDown", instancePanel, "UIDropDownMenuTemplate")
-    dropdowns.levelRange:SetPoint("TOPLEFT", instancePanel, "TOPLEFT", 128, -378)
+    dropdowns.levelRange:SetPoint("TOPLEFT", instancePanel, "TOPLEFT", 128, -360)
     UIDropDownMenu_SetWidth(dropdowns.levelRange, 150)
     UIDropDownMenu_Initialize(dropdowns.levelRange, InitializeLevelRangeDropdown)
 
-    CreateLabel(instancePanel, "Table size", 18, -428)
+    CreateLabel(instancePanel, "Table size", 18, -410)
     tableScaleSlider = CreateFrame("Slider", "WITInterfaceOptionsTableScaleSlider", instancePanel, "OptionsSliderTemplate")
-    tableScaleSlider:SetPoint("TOPLEFT", instancePanel, "TOPLEFT", 128, -426)
+    tableScaleSlider:SetPoint("TOPLEFT", instancePanel, "TOPLEFT", 128, -408)
     tableScaleSlider:SetWidth(170)
     tableScaleSlider:SetMinMaxValues(50, 150)
     tableScaleSlider:SetValueStep(10)
@@ -398,19 +397,19 @@ addon.ui.CreateInterfaceOptions = function(options)
         end
     end)
 
-    CreateHeader(instancePanel, "Developer settings", -484)
+    CreateHeader(instancePanel, "Developer Settings", -466)
     checkboxes.enableDebugPrinting = CreateCheckbox(
         instancePanel,
         "WITInterfaceOptionsEnableDebugPrinting",
         "Enable debug printing",
-        -508,
+        -490,
         options.onSetDebugPrinting
     )
     checkboxes.enableDebugLogging = CreateCheckbox(
         instancePanel,
         "WITInterfaceOptionsEnableDebugLogging",
         "Enable debug logging",
-        -536,
+        -518,
         options.onSetDebugLogging
     )
 

@@ -224,9 +224,9 @@ local function RegisterInterfaceOptions()
     title:SetPoint("TOPLEFT", interfaceOptionsPanel, "TOPLEFT", 16, -16)
     title:SetText("Warmane Not Away")
 
-    local header = interfaceOptionsPanel:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+    local header = interfaceOptionsPanel:CreateFontString(nil, "ARTWORK", "GameFontNormalMed3")
     header:SetPoint("TOPLEFT", interfaceOptionsPanel, "TOPLEFT", 18, -52)
-    header:SetText("User settings")
+    header:SetText("User Settings")
 
     interfaceOptionsCheckbox = CreateFrame("CheckButton", "WNAInterfaceOptionsEnabled", interfaceOptionsPanel, "InterfaceOptionsCheckButtonTemplate")
     interfaceOptionsCheckbox:SetPoint("TOPLEFT", interfaceOptionsPanel, "TOPLEFT", 14, -76)

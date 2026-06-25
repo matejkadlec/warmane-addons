@@ -66,6 +66,8 @@ local frame = CreateFrame("Frame")
 local lastAlertAt = -DEFAULT_ALERT_DELAY
 local interfaceOptionsPanel = nil
 local interfaceOptionsCheckbox = nil
+local insideInstancesCheckbox = nil
+local outsideInstancesCheckbox = nil
 local delaySlider = nil
 local delayValueText = nil
 local thresholdSlider = nil
@@ -117,6 +119,21 @@ local function InitializeSavedData()
         HealerManaSettings.enabled = DEFAULT_ADDON_ENABLED
     end
 
+    if type(HealerManaSettings.enabledInsideInstances) ~= "boolean" then
+        HealerManaSettings.enabledInsideInstances = HealerManaSettings.enabled == true
+    end
+
+    if type(HealerManaSettings.enabledOutsideInstances) ~= "boolean" then
+        HealerManaSettings.enabledOutsideInstances = HealerManaSettings.enabled == true
+    end
+
+    if HealerManaSettings.enabled ~= true then
+        HealerManaSettings.enabledInsideInstances = false
+        HealerManaSettings.enabledOutsideInstances = false
+    elseif not HealerManaSettings.enabledInsideInstances and not HealerManaSettings.enabledOutsideInstances then
+        HealerManaSettings.enabled = false
+    end
+
     if type(HealerManaSettings.autoActivatePartySizes) ~= "table" then
         HealerManaSettings.autoActivatePartySizes = {}
     end
@@ -149,9 +166,42 @@ local function IsAddonEnabled()
 end
 
 -- Persist one validated enabled state
-local function SetSavedAddonEnabled(enabled)
+local function SetSavedAddonEnabled(enabled, syncLocations)
     InitializeSavedData()
     HealerManaSettings.enabled = enabled and true or false
+    if syncLocations ~= false then
+        HealerManaSettings.enabledInsideInstances = HealerManaSettings.enabled
+        HealerManaSettings.enabledOutsideInstances = HealerManaSettings.enabled
+    end
+end
+
+-- Read whether warnings are enabled inside party or raid instances
+local function IsInsideInstancesEnabled()
+    InitializeSavedData()
+    return HealerManaSettings.enabledInsideInstances == true
+end
+
+-- Read whether warnings are enabled while grouped outside instances
+local function IsOutsideInstancesEnabled()
+    InitializeSavedData()
+    return HealerManaSettings.enabledOutsideInstances == true
+end
+
+-- Persist one child location toggle and keep the parent enabled state consistent
+local function SetSavedLocationEnabled(location, enabled)
+    InitializeSavedData()
+
+    if location == "inside" then
+        HealerManaSettings.enabledInsideInstances = enabled and true or false
+    elseif location == "outside" then
+        HealerManaSettings.enabledOutsideInstances = enabled and true or false
+    end
+
+    if HealerManaSettings.enabledInsideInstances or HealerManaSettings.enabledOutsideInstances then
+        SetSavedAddonEnabled(true, false)
+    else
+        SetSavedAddonEnabled(false, false)
+    end
 end
 
 -- Return whether a party size can be configured for auto-activation
@@ -262,18 +312,30 @@ local function GetCurrentPartySize()
     return 1
 end
 
--- Return true only while the current party or raid instance size is enabled
-local function IsActiveGroupInstance()
+-- Return true while the current grouped location and party size are enabled
+local function IsEnabledGroupedLocation()
     if type(IsInInstance) ~= "function" then
         return false
     end
 
     local success, isInstance, instanceType = pcall(IsInInstance)
-    if not success or not isInstance or (instanceType ~= "party" and instanceType ~= "raid") then
+    if not success then
         return false
     end
 
-    return IsAutoActivatePartySizeEnabled(GetCurrentPartySize())
+    if not IsAutoActivatePartySizeEnabled(GetCurrentPartySize()) then
+        return false
+    end
+
+    if isInstance and (instanceType == "party" or instanceType == "raid") then
+        return IsInsideInstancesEnabled()
+    end
+
+    if not isInstance then
+        return IsOutsideInstancesEnabled()
+    end
+
+    return false
 end
 
 -- Return true for classes that can reasonably be the healer in manual groups
@@ -395,7 +457,7 @@ local function CheckLowManaAlert()
         return
     end
 
-    if not IsActiveGroupInstance() or not IsPlayerHealer() or not IsLowMana() then
+    if not IsEnabledGroupedLocation() or not IsPlayerHealer() or not IsLowMana() then
         return
     end
 
@@ -563,18 +625,34 @@ end
 -- Enable or disable healer mana warnings without reloading the UI
 local function SetAddonEnabled(enabled)
     local currentlyEnabled = IsAddonEnabled()
-    if currentlyEnabled == enabled then
+    local fullyEnabled = currentlyEnabled and IsInsideInstancesEnabled() and IsOutsideInstancesEnabled()
+    local fullyDisabled = not currentlyEnabled and not IsInsideInstancesEnabled() and not IsOutsideInstancesEnabled()
+    if (enabled and fullyEnabled) or (not enabled and fullyDisabled) then
         print(FormatMessage(ADDON_PREFIX, string_format("%s is already %s.", ADDON_FULL_NAME, enabled and "enabled" or "disabled")))
         return
     end
 
-    SetSavedAddonEnabled(enabled)
+    SetSavedAddonEnabled(enabled, true)
     if enabled then
         StartAlertCooldown()
     else
         lastAlertAt = -GetAlertDelay()
     end
     print(FormatMessage(ADDON_PREFIX, string_format("%s %s.", ADDON_FULL_NAME, enabled and "enabled" or "disabled")))
+
+    if RefreshInterfaceOptions then
+        RefreshInterfaceOptions()
+    end
+end
+
+-- Toggle one child location setting from the options UI
+local function SetLocationEnabled(location, enabled)
+    SetSavedLocationEnabled(location, enabled)
+    if IsAddonEnabled() then
+        StartAlertCooldown()
+    else
+        lastAlertAt = -GetAlertDelay()
+    end
 
     if RefreshInterfaceOptions then
         RefreshInterfaceOptions()
@@ -696,11 +774,39 @@ local function EnsureWarmaneAddOnsCategory(defaultOpenFunc)
     end
 end
 
+-- Enable or disable a child checkbox and its smaller label together
+local function SetChildCheckboxEnabled(checkbox, enabled)
+    if not checkbox then
+        return
+    end
+
+    local text = getglobal(checkbox:GetName() .. "Text")
+    if enabled then
+        checkbox:Enable()
+        if text then
+            text:SetFontObject("GameFontHighlightSmall")
+        end
+    else
+        checkbox:Disable()
+        if text then
+            text:SetFontObject("GameFontDisableSmall")
+        end
+    end
+end
+
 RefreshInterfaceOptions = function()
     refreshingInterfaceOptions = true
 
     if interfaceOptionsCheckbox then
         interfaceOptionsCheckbox:SetChecked(IsAddonEnabled())
+    end
+    if insideInstancesCheckbox then
+        insideInstancesCheckbox:SetChecked(IsInsideInstancesEnabled())
+        SetChildCheckboxEnabled(insideInstancesCheckbox, IsAddonEnabled())
+    end
+    if outsideInstancesCheckbox then
+        outsideInstancesCheckbox:SetChecked(IsOutsideInstancesEnabled())
+        SetChildCheckboxEnabled(outsideInstancesCheckbox, IsAddonEnabled())
     end
     if delaySlider then
         delaySlider:SetValue(GetAlertDelay())
@@ -742,23 +848,41 @@ local function RegisterInterfaceOptions()
     title:SetPoint("TOPLEFT", interfaceOptionsPanel, "TOPLEFT", 16, -16)
     title:SetText("Warmane Healer Mana")
 
-    local header = interfaceOptionsPanel:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+    local header = interfaceOptionsPanel:CreateFontString(nil, "ARTWORK", "GameFontNormalMed3")
     header:SetPoint("TOPLEFT", interfaceOptionsPanel, "TOPLEFT", 18, -52)
-    header:SetText("User settings")
+    header:SetText("User Settings")
 
     interfaceOptionsCheckbox = CreateFrame("CheckButton", "WHMInterfaceOptionsEnabled", interfaceOptionsPanel, "InterfaceOptionsCheckButtonTemplate")
     interfaceOptionsCheckbox:SetPoint("TOPLEFT", interfaceOptionsPanel, "TOPLEFT", 14, -76)
-    getglobal(interfaceOptionsCheckbox:GetName() .. "Text"):SetText("Enable healer mana warnings")
+    getglobal(interfaceOptionsCheckbox:GetName() .. "Text"):SetText("Enable Healer Mana Warnings")
     interfaceOptionsCheckbox:SetScript("OnClick", function(self)
         SetAddonEnabled(self:GetChecked() and true or false)
     end)
 
-    local delayLabel = interfaceOptionsPanel:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
-    delayLabel:SetPoint("TOPLEFT", interfaceOptionsPanel, "TOPLEFT", 18, -124)
-    delayLabel:SetText("Warning delay")
+    insideInstancesCheckbox = CreateFrame("CheckButton", "WHMInterfaceOptionsInsideInstances", interfaceOptionsPanel, "InterfaceOptionsSmallCheckButtonTemplate")
+    insideInstancesCheckbox:SetPoint("TOPLEFT", interfaceOptionsPanel, "TOPLEFT", 34, -102)
+    getglobal(insideInstancesCheckbox:GetName() .. "Text"):SetText("Enable Inside Instances")
+    insideInstancesCheckbox:SetScript("OnClick", function(self)
+        if not refreshingInterfaceOptions then
+            SetLocationEnabled("inside", self:GetChecked() and true or false)
+        end
+    end)
+
+    outsideInstancesCheckbox = CreateFrame("CheckButton", "WHMInterfaceOptionsOutsideInstances", interfaceOptionsPanel, "InterfaceOptionsSmallCheckButtonTemplate")
+    outsideInstancesCheckbox:SetPoint("TOPLEFT", interfaceOptionsPanel, "TOPLEFT", 34, -124)
+    getglobal(outsideInstancesCheckbox:GetName() .. "Text"):SetText("Enable Outside Instances")
+    outsideInstancesCheckbox:SetScript("OnClick", function(self)
+        if not refreshingInterfaceOptions then
+            SetLocationEnabled("outside", self:GetChecked() and true or false)
+        end
+    end)
+
+    local delayLabel = interfaceOptionsPanel:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+    delayLabel:SetPoint("TOPLEFT", interfaceOptionsPanel, "TOPLEFT", 18, -166)
+    delayLabel:SetText("Warning Delay")
 
     delaySlider = CreateFrame("Slider", "WHMInterfaceOptionsDelaySlider", interfaceOptionsPanel, "OptionsSliderTemplate")
-    delaySlider:SetPoint("TOPLEFT", interfaceOptionsPanel, "TOPLEFT", 128, -122)
+    delaySlider:SetPoint("TOPLEFT", interfaceOptionsPanel, "TOPLEFT", 128, -164)
     delaySlider:SetWidth(170)
     delaySlider:SetMinMaxValues(MIN_ALERT_DELAY, MAX_ALERT_DELAY)
     delaySlider:SetValueStep(5)
@@ -785,12 +909,12 @@ local function RegisterInterfaceOptions()
         end
     end)
 
-    local thresholdLabel = interfaceOptionsPanel:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
-    thresholdLabel:SetPoint("TOPLEFT", interfaceOptionsPanel, "TOPLEFT", 18, -174)
-    thresholdLabel:SetText("Mana threshold")
+    local thresholdLabel = interfaceOptionsPanel:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+    thresholdLabel:SetPoint("TOPLEFT", interfaceOptionsPanel, "TOPLEFT", 18, -216)
+    thresholdLabel:SetText("Mana Threshold")
 
     thresholdSlider = CreateFrame("Slider", "WHMInterfaceOptionsThresholdSlider", interfaceOptionsPanel, "OptionsSliderTemplate")
-    thresholdSlider:SetPoint("TOPLEFT", interfaceOptionsPanel, "TOPLEFT", 128, -172)
+    thresholdSlider:SetPoint("TOPLEFT", interfaceOptionsPanel, "TOPLEFT", 128, -214)
     thresholdSlider:SetWidth(170)
     thresholdSlider:SetMinMaxValues(MIN_MANA_THRESHOLD, MAX_MANA_THRESHOLD)
     thresholdSlider:SetValueStep(MANA_THRESHOLD_STEP)
@@ -816,15 +940,15 @@ local function RegisterInterfaceOptions()
         end
     end)
 
-    local autoActivateHeader = interfaceOptionsPanel:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-    autoActivateHeader:SetPoint("TOPLEFT", interfaceOptionsPanel, "TOPLEFT", 18, -224)
+    local autoActivateHeader = interfaceOptionsPanel:CreateFontString(nil, "ARTWORK", "GameFontNormalMed3")
+    autoActivateHeader:SetPoint("TOPLEFT", interfaceOptionsPanel, "TOPLEFT", 18, -266)
     autoActivateHeader:SetText("Auto-Activate On:")
 
     for i = 1, #AUTO_ACTIVATE_PARTY_SIZES do
         local partySize = AUTO_ACTIVATE_PARTY_SIZES[i]
         local checkbox = CreateFrame("CheckButton", "WHMInterfaceOptionsPartySize" .. partySize, interfaceOptionsPanel, "InterfaceOptionsCheckButtonTemplate")
         checkbox.partySize = partySize
-        checkbox:SetPoint("TOPLEFT", interfaceOptionsPanel, "TOPLEFT", 14, -238 - ((i - 1) * 24))
+        checkbox:SetPoint("TOPLEFT", interfaceOptionsPanel, "TOPLEFT", 14, -280 - ((i - 1) * 24))
         getglobal(checkbox:GetName() .. "Text"):SetText(partySize .. " Player Group")
         checkbox:SetScript("OnClick", function(self)
             if not refreshingInterfaceOptions then

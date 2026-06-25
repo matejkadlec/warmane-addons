@@ -74,16 +74,16 @@ addon.ui.CreateConfigFrame = function(options)
         configFrame:SetBackdropBorderColor(0.4, 0.4, 0.4, 1)
         configFrame:Hide()
 
-        local title = configFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        local title = configFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
         title:SetPoint("TOP", configFrame, "TOP", 0, -16)
         title:SetText("Warmane Instance Tracker - Settings")
 
         local closeButton = CreateFrame("Button", nil, configFrame, "UIPanelCloseButton")
         closeButton:SetPoint("TOPRIGHT", configFrame, "TOPRIGHT", -5, -5)
 
-        local userHeader = configFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        local userHeader = configFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalMed3")
         userHeader:SetPoint("TOPLEFT", configFrame, "TOPLEFT", 18, -44)
-        userHeader:SetText("User settings")
+        userHeader:SetText("User Settings")
 
         local userTracking = CreateFrame("CheckButton", "WITConfigEnableInstanceTracking", configFrame, "InterfaceOptionsCheckButtonTemplate")
         userTracking:SetPoint("TOPLEFT", configFrame, "TOPLEFT", 14, -66)
@@ -103,9 +103,9 @@ addon.ui.CreateConfigFrame = function(options)
             end
         end)
 
-        local devHeader = configFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        local devHeader = configFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalMed3")
         devHeader:SetPoint("TOPLEFT", userPartyMessage, "BOTTOMLEFT", 4, -20)
-        devHeader:SetText("Developer settings")
+        devHeader:SetText("Developer Settings")
 
         local devDebugPrinting = CreateFrame("CheckButton", "WITConfigEnableDebugPrinting", configFrame, "InterfaceOptionsCheckButtonTemplate")
         devDebugPrinting:SetPoint("TOPLEFT", devHeader, "BOTTOMLEFT", -4, -6)

@@ -74,8 +74,8 @@
 | WarmaneWGReminder | WWR | `/wwr` | Wintergrasp timing reminders; level 80 only |
 | WarmaneChatCopy | WCC | `/wcc` | Click chat messages/channel names to copy text |
 | WarmaneTrackingAid | WTA | `/wta` | Hunter tracking switcher; Hunters only |
-| WarmaneHealerMana | WHM | `/whm` | Healer low-mana group warning; manual role fallback; delayed first shout after enabling |
-| WarmaneHealerProtection | WHP | `/whp` | Healer aggro group warning; manual role fallback; direct-attack aggro fallback |
+| WarmaneHealerMana | WHM | `/whm` | Healer low-mana group warning inside instances or while grouped outside; manual role fallback; delayed first shout after enabling |
+| WarmaneHealerProtection | WHP | `/whp` | Healer aggro group warning inside instances or while grouped outside; manual role fallback; direct-attack aggro fallback; configurable boss/non-boss aggro thresholds |
 | WarmaneNotAway | WNA | `/wna` | Automatically re-enables/uses Blizzard AFK auto-clear |
 
 ### Backported AddOns (`backports/`)
@@ -148,7 +148,7 @@
   - `/wcc`: bare command behaves like `help`; `on`, `off`, `help`
   - `/wta`: bare command behaves like `help`; `on`, `off`, `help`
   - `/whm`: `on`, `off`, `party <2|3|5|10|25> <on|off>`, `help`, `delay`, `delay <seconds>`, `threshold`, `threshold <5|10|15|20|25>`
-  - `/whp`: `on`, `off`, `party <2|3|5|10|25> <on|off>`, `help`, `delay`, `delay <seconds>`
+  - `/whp`: `on`, `off`, `party <2|3|5|10|25> <on|off>`, `help`, `delay`, `delay <seconds>`, `min`, `min <1|2|3|5|10>`, `min -b <1|2|3>`
   - `/wna`: bare command behaves like `help`; `on`, `off`, `help`
 
 ---
