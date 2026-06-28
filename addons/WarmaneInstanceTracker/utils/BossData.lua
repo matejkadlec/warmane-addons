@@ -41,6 +41,7 @@ addon.DUNGEON_FINAL_BOSSES = {
     [12201] = "Maraudon - Pristine Waters", -- Princess Theradras
     -- Zul'Farrak
     [7267] = "Zul'Farrak", -- Chief Ukorz Sandscalp
+    [7797] = "Zul'Farrak", -- Ruuzlu
     -- Sunken Temple
     [5709] = "Sunken Temple", -- Shade of Eranikus
     -- Blackrock Depths Prison
@@ -65,6 +66,7 @@ addon.DUNGEON_FINAL_BOSSES = {
     --==========================================================================--
     -- Hellfire Ramparts
     [17536] = "Hellfire Ramparts", -- Nazan
+    [17537] = "Hellfire Ramparts", -- Vazruden the Herald
     -- The Blood Furnace
     [17377] = "The Blood Furnace", -- Keli'dan the Breaker
     -- The Slave Pens
@@ -100,7 +102,7 @@ addon.DUNGEON_FINAL_BOSSES = {
     --                     Wrath of the Lich King Dungeons                      --
     --==========================================================================--
     -- Utgarde Keep
-    [23954] = "Utgarde Keep", -- Ingvar the Plunderer
+    [23980] = "Utgarde Keep", -- Ingvar the Plunderer (undead phase)
     -- The Nexus
     [26723] = "The Nexus", -- Keristrasza
     -- Azjol-Nerub
@@ -139,6 +141,21 @@ addon.DUNGEON_FINAL_BOSSES = {
     [23872] = "Blackrock Depths", -- Coren Direbrew
     -- Love is in the Air
     [36296] = "Shadowfang Keep", -- Apothecary Hummel
+}
+
+-- Completion requirements for final encounters that need more than one death event
+addon.DUNGEON_COMPLETION_REQUIREMENTS = {
+    ["Scarlet Monastery - Cathedral"] = {
+        [3976] = 2, -- Scarlet Commander Mograine dies before and after Whitemane revives him
+    },
+    ["Zul'Farrak"] = {
+        [7267] = 1, -- Chief Ukorz Sandscalp
+        [7797] = 1, -- Ruuzlu
+    },
+    ["Hellfire Ramparts"] = {
+        [17536] = 1, -- Nazan
+        [17537] = 1, -- Vazruden the Herald
+    },
 }
 
 -- Map wing names back to live zone names for clients that report only the parent zone
@@ -368,6 +385,10 @@ for npcId, _ in pairs(addon.DUNGEON_FINAL_BOSSES) do
 end
 
 -- Extra non-final bosses for low-level instances commonly used in tests
+-- Scarlet Monastery Cathedral
+addon.DUNGEON_DEBUG_BOSSES[3977] = true -- High Inquisitor Whitemane
+-- Utgarde Keep
+addon.DUNGEON_DEBUG_BOSSES[23954] = true -- Ingvar the Plunderer (living phase)
 -- The Stockade
 addon.DUNGEON_DEBUG_BOSSES[1663] = true -- Dextren Ward
 -- Ragefire Chasm

@@ -33,6 +33,7 @@ local DUNGEON_FINAL_BOSSES = addon.DUNGEON_FINAL_BOSSES
 local DUNGEON_DEBUG_BOSSES = addon.DUNGEON_DEBUG_BOSSES or {}
 local DUNGEON_BASE_INSTANCE_NAMES = addon.DUNGEON_BASE_INSTANCE_NAMES or {}
 local DUNGEON_INSTANCE_NAME_ALIASES = addon.DUNGEON_INSTANCE_NAME_ALIASES or {}
+local DUNGEON_COMPLETION_REQUIREMENTS = addon.DUNGEON_COMPLETION_REQUIREMENTS or {}
 
 local COLOR = {
     ORANGE = "|cFFFF8000",
@@ -49,6 +50,7 @@ local KILL_XP_MATCH_WINDOW = vars.KILL_XP_MATCH_WINDOW or 3
 local AUTO_START_DELAY = vars.AUTO_START_DELAY or 1
 local COMPLETION_XP_SETTLE_DELAY = vars.COMPLETION_XP_SETTLE_DELAY or 1
 local ACTIVE_RUN_RESTORE_WINDOW = vars.ACTIVE_RUN_RESTORE_WINDOW or 1800
+local COMPLETION_DEATH_DEDUPE_WINDOW = 2
 local MAX_PLAYER_LEVEL_FALLBACK = 80
 
 -- Initialize instance tracking state variables
@@ -69,6 +71,8 @@ local isCorpseRunning = false
 local isInsideTrackedInstance = false
 local pendingKillCount = 0
 local lastKillEventAt = 0
+local completionKillCounts = {}
+local completionDeathGUIDs = {}
 local runHadGroup = false
 local ignoredInstanceName = ""
 local ignoredMessagePrinted = false
@@ -176,6 +180,39 @@ local function RestoreLevelXPByLevel(savedLevels)
 
     for level, maxXP in pairs(savedLevels) do
         CaptureLevelXP(level, maxXP)
+    end
+end
+
+-- Copy partial final-encounter kills so reloads do not lose multi-boss progress
+local function CopyCompletionKillCounts()
+    local copy = {}
+    local copied = false
+
+    for npcId, count in pairs(completionKillCounts) do
+        if type(npcId) == "number" and type(count) == "number" and count > 0 then
+            copy[npcId] = math_floor(count)
+            copied = true
+        end
+    end
+
+    return copied and copy or nil
+end
+
+-- Restore partial final-encounter kill counts from an active-run snapshot
+local function RestoreCompletionKillCounts(savedCounts)
+    completionKillCounts = {}
+
+    if type(savedCounts) ~= "table" then
+        return
+    end
+
+    for npcId, count in pairs(savedCounts) do
+        local normalizedNpcId = tonumber(npcId)
+        local normalizedCount = tonumber(count)
+        if type(normalizedNpcId) == "number" and type(normalizedCount) == "number" and
+            normalizedNpcId > 0 and normalizedCount > 0 then
+            completionKillCounts[math_floor(normalizedNpcId)] = math_floor(normalizedCount)
+        end
     end
 end
 
@@ -327,6 +364,63 @@ local function AreInstanceNamesEquivalent(leftName, rightName)
     return false
 end
 
+-- Resolve special completion requirements for the current instance display name
+local function GetCompletionRequirements(rawInstanceName)
+    if type(DUNGEON_COMPLETION_REQUIREMENTS) ~= "table" then
+        return nil
+    end
+
+    local canonicalInstanceName = GetCanonicalInstanceName(rawInstanceName)
+    local directRequirements = DUNGEON_COMPLETION_REQUIREMENTS[canonicalInstanceName]
+    if type(directRequirements) == "table" then
+        return directRequirements
+    end
+
+    for requiredInstanceName, requirements in pairs(DUNGEON_COMPLETION_REQUIREMENTS) do
+        if type(requirements) == "table" and AreInstanceNamesEquivalent(requiredInstanceName, canonicalInstanceName) then
+            return requirements
+        end
+    end
+
+    return nil
+end
+
+-- Return whether all required death counts for a scripted final encounter are met
+local function AreCompletionRequirementsMet(rawInstanceName)
+    local requirements = GetCompletionRequirements(rawInstanceName)
+    if type(requirements) ~= "table" then
+        return true
+    end
+
+    for requiredNpcId, requiredCount in pairs(requirements) do
+        if type(requiredNpcId) == "number" and type(requiredCount) == "number" and requiredCount > 0 then
+            if (completionKillCounts[requiredNpcId] or 0) < requiredCount then
+                return false
+            end
+        end
+    end
+
+    return true
+end
+
+-- Count one completion-relevant death while ignoring duplicate combat-log subevents
+local function RecordCompletionKill(npcId, dstGUID, eventTime)
+    if type(npcId) ~= "number" then
+        return false
+    end
+
+    if type(dstGUID) == "string" and dstGUID ~= "" then
+        local lastRecordedAt = completionDeathGUIDs[dstGUID]
+        if type(lastRecordedAt) == "number" and (eventTime - lastRecordedAt) <= COMPLETION_DEATH_DEDUPE_WINDOW then
+            return false
+        end
+        completionDeathGUIDs[dstGUID] = eventTime
+    end
+
+    completionKillCounts[npcId] = (completionKillCounts[npcId] or 0) + 1
+    return true
+end
+
 -- Remember the exact LFG proposal name so winged dungeons are tracked precisely
 local function SetRecentLFGInstanceName(instanceName)
     if type(instanceName) ~= "string" or instanceName == "" then
@@ -466,6 +560,8 @@ local function ResetInstanceTrackingState()
     isInsideTrackedInstance = false
     pendingKillCount = 0
     lastKillEventAt = 0
+    completionKillCounts = {}
+    completionDeathGUIDs = {}
     runHadGroup = false
     ClearRecentLFGInstanceName()
     ClearPendingCompletion()
@@ -552,6 +648,8 @@ local function StartInstanceTracking(resolvedInstanceName, source, startedAt)
     mobsKilled = 0
     pendingKillCount = 0
     lastKillEventAt = 0
+    completionKillCounts = {}
+    completionDeathGUIDs = {}
     isCorpseRunning = false
     isInsideTrackedInstance = true
     runHadGroup = HasActiveInstanceGroup()
@@ -714,6 +812,7 @@ PersistActiveRun = function(updateXP)
             xpCheckpointMax = xpCheckpointMax,
             levelCheckpoint = levelCheckpoint,
             mobsKilled = mobsKilled,
+            completionKills = CopyCompletionKillCounts(),
             runHadGroup = runHadGroup,
             savedAt = time()
         })
@@ -773,10 +872,12 @@ TryRestoreActiveRun = function()
     levelCheckpoint = type(snapshot.levelCheckpoint) == "number" and snapshot.levelCheckpoint > 0 and snapshot.levelCheckpoint or safe.UnitLevel("player") or 1
     CaptureLevelXP(levelCheckpoint, xpCheckpointMax)
     mobsKilled = type(snapshot.mobsKilled) == "number" and snapshot.mobsKilled >= 0 and snapshot.mobsKilled or 0
+    RestoreCompletionKillCounts(snapshot.completionKills)
     isCorpseRunning = false
     isInsideTrackedInstance = true
     pendingKillCount = 0
     lastKillEventAt = 0
+    completionDeathGUIDs = {}
     runHadGroup = snapshot.runHadGroup == true or HasActiveInstanceGroup()
     ClearRecentLFGInstanceName()
 
@@ -1368,11 +1469,56 @@ local function HandleCombatLogEvent(...)
     end
 
     if isFinalBossMatch then
-        DebugMessage("completion-trigger", "matched final boss")
+        local recordedCompletionKill = RecordCompletionKill(npcId, dstGUID, eventTime)
+        DebugMessage("completion-kill-counted", recordedCompletionKill and "true" or "duplicate")
+
+        if not AreCompletionRequirementsMet(matchedBossInstance) then
+            DebugMessage("completion-trigger", "waiting for required encounter kills")
+            PersistActiveRun(false)
+            return
+        end
+
+        DebugMessage("completion-trigger", "matched final encounter")
         instanceName = matchedBossInstance
         PersistActiveRun(true)
         ScheduleInstanceCompletion(true, true)
     end
+end
+
+-- Treat Blizzard's RDF completion reward as authoritative for scripted non-death endings
+local function HandleLFGCompletionReward()
+    if state ~= STATE_ACTIVE or not instanceTrackingEnabled or not HasTrackedRun() then
+        return
+    end
+
+    local completionInstanceName = instanceName
+    local rewardInstanceName = nil
+    if type(GetLFGCompletionReward) == "function" then
+        local success, rewardName = pcall(GetLFGCompletionReward)
+        if success and type(rewardName) == "string" and rewardName ~= "" then
+            rewardInstanceName = rewardName
+        end
+    end
+
+    local resolvedInstanceName, isPartyInstance, hasValidStatus = ResolveCurrentPartyInstanceName()
+    if hasValidStatus then
+        if not isPartyInstance or not AreInstanceNamesEquivalent(instanceName, resolvedInstanceName) then
+            DebugMessage("lfg-completion", "skipped (tracked instance mismatch)")
+            return
+        end
+        completionInstanceName = resolvedInstanceName
+    end
+
+    if rewardInstanceName and AreInstanceNamesEquivalent(rewardInstanceName, completionInstanceName) then
+        completionInstanceName = GetCanonicalInstanceName(rewardInstanceName)
+    elseif rewardInstanceName then
+        DebugMessage("lfg-completion-reward-name", rewardInstanceName)
+    end
+
+    DebugMessage("completion-trigger", "lfg completion reward")
+    instanceName = completionInstanceName
+    PersistActiveRun(true)
+    ScheduleInstanceCompletion(true, true)
 end
 
 -- Handle one XP/level update and correlate nearby death events with mob kills
@@ -1782,6 +1928,8 @@ end
 function runTracker.HandleEvent(event, ...)
     if event == "COMBAT_LOG_EVENT_UNFILTERED" then
         HandleCombatLogEvent(...)
+    elseif event == "LFG_COMPLETION_REWARD" then
+        HandleLFGCompletionReward()
     elseif event == "PLAYER_XP_UPDATE" then
         HandleXPUpdate()
     elseif event == "PLAYER_LEVEL_UP" then

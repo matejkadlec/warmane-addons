@@ -274,6 +274,7 @@ WIT:RegisterEvent("UNIT_AURA")
 WIT:RegisterEvent("CHAT_MSG_SYSTEM")
 WIT:RegisterEvent("LFG_PROPOSAL_SHOW")
 WIT:RegisterEvent("LFG_PROPOSAL_UPDATE")
+WIT:RegisterEvent("LFG_COMPLETION_REWARD")
 
 -- Main event handler
 WIT:SetScript("OnEvent", function(self, event, ...)
